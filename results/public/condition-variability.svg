@@ -1,0 +1,123 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="650" viewBox="0 0 1120 650">
+<rect width="1120" height="650" fill="#fbfcfe"/>
+<g font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" fill="#172033">
+<text x="55" y="34" font-size="20" font-weight="700">OIDC workload variability (3 trials per condition)</text>
+<text x="55" y="56" font-size="12" fill="#556176">Dots are individual runs; horizontal bars are medians. Success ratios are shown in the lower panels.</text>
+<text x="55" y="88" font-size="14" font-weight="600">Login p99 (ms)</text>
+<path d="M55 275.0 H525" stroke="#dfe4ec"/>
+<text x="47" y="279.0" text-anchor="end" font-size="10" fill="#667085">0</text>
+<path d="M55 231.2 H525" stroke="#dfe4ec"/>
+<text x="47" y="235.2" text-anchor="end" font-size="10" fill="#667085">25</text>
+<path d="M55 187.5 H525" stroke="#dfe4ec"/>
+<text x="47" y="191.5" text-anchor="end" font-size="10" fill="#667085">50</text>
+<path d="M55 143.8 H525" stroke="#dfe4ec"/>
+<text x="47" y="147.8" text-anchor="end" font-size="10" fill="#667085">75</text>
+<path d="M55 100.0 H525" stroke="#dfe4ec"/>
+<text x="47" y="104.0" text-anchor="end" font-size="10" fill="#667085">100</text>
+<circle cx="165.5" cy="143.8" r="4.5" fill="#2563eb"/>
+<circle cx="172.5" cy="147.2" r="4.5" fill="#2563eb"/>
+<circle cx="179.5" cy="143.8" r="4.5" fill="#2563eb"/>
+<path d="M156.5 143.8 H188.5" stroke="#111827" stroke-width="2"/>
+<text x="172.5" y="295" text-anchor="middle" font-size="10">login-only</text>
+<text x="172.5" y="135.8" text-anchor="middle" font-size="10" fill="#344054">med 75</text>
+<circle cx="283.0" cy="131.5" r="4.5" fill="#7c3aed"/>
+<circle cx="290.0" cy="142.0" r="4.5" fill="#7c3aed"/>
+<circle cx="297.0" cy="142.0" r="4.5" fill="#7c3aed"/>
+<path d="M274.0 142.0 H306.0" stroke="#111827" stroke-width="2"/>
+<text x="290.0" y="295" text-anchor="middle" font-size="10">steady-mixed</text>
+<text x="290.0" y="134.0" text-anchor="middle" font-size="10" fill="#344054">med 76</text>
+<circle cx="400.5" cy="143.8" r="4.5" fill="#dc2626"/>
+<circle cx="407.5" cy="138.5" r="4.5" fill="#dc2626"/>
+<circle cx="414.5" cy="124.5" r="4.5" fill="#dc2626"/>
+<path d="M391.5 138.5 H423.5" stroke="#111827" stroke-width="2"/>
+<text x="407.5" y="295" text-anchor="middle" font-size="10">mixed-burst</text>
+<text x="407.5" y="130.5" text-anchor="middle" font-size="10" fill="#344054">med 78</text>
+<text x="590" y="88" font-size="14" font-weight="600">Refresh p99 (ms)</text>
+<path d="M590 275.0 H1060" stroke="#dfe4ec"/>
+<text x="582" y="279.0" text-anchor="end" font-size="10" fill="#667085">0</text>
+<path d="M590 231.2 H1060" stroke="#dfe4ec"/>
+<text x="582" y="235.2" text-anchor="end" font-size="10" fill="#667085">2</text>
+<path d="M590 187.5 H1060" stroke="#dfe4ec"/>
+<text x="582" y="191.5" text-anchor="end" font-size="10" fill="#667085">5</text>
+<path d="M590 143.8 H1060" stroke="#dfe4ec"/>
+<text x="582" y="147.8" text-anchor="end" font-size="10" fill="#667085">8</text>
+<path d="M590 100.0 H1060" stroke="#dfe4ec"/>
+<text x="582" y="104.0" text-anchor="end" font-size="10" fill="#667085">10</text>
+<circle cx="700.5" cy="187.5" r="4.5" fill="#d97706"/>
+<circle cx="707.5" cy="187.5" r="4.5" fill="#d97706"/>
+<circle cx="714.5" cy="187.5" r="4.5" fill="#d97706"/>
+<path d="M691.5 187.5 H723.5" stroke="#111827" stroke-width="2"/>
+<text x="707.5" y="295" text-anchor="middle" font-size="10">refresh-only</text>
+<text x="707.5" y="179.5" text-anchor="middle" font-size="10" fill="#344054">med 5</text>
+<circle cx="818.0" cy="170.0" r="4.5" fill="#7c3aed"/>
+<circle cx="825.0" cy="187.5" r="4.5" fill="#7c3aed"/>
+<circle cx="832.0" cy="170.0" r="4.5" fill="#7c3aed"/>
+<path d="M809.0 170.0 H841.0" stroke="#111827" stroke-width="2"/>
+<text x="825.0" y="295" text-anchor="middle" font-size="10">steady-mixed</text>
+<text x="825.0" y="162.0" text-anchor="middle" font-size="10" fill="#344054">med 6</text>
+<circle cx="935.5" cy="170.0" r="4.5" fill="#dc2626"/>
+<circle cx="942.5" cy="170.0" r="4.5" fill="#dc2626"/>
+<circle cx="949.5" cy="152.5" r="4.5" fill="#dc2626"/>
+<path d="M926.5 170.0 H958.5" stroke="#111827" stroke-width="2"/>
+<text x="942.5" y="295" text-anchor="middle" font-size="10">mixed-burst</text>
+<text x="942.5" y="162.0" text-anchor="middle" font-size="10" fill="#344054">med 6</text>
+<text x="55" y="378" font-size="14" font-weight="600">Login success (%)</text>
+<path d="M55 565.0 H525" stroke="#dfe4ec"/>
+<text x="47" y="569.0" text-anchor="end" font-size="10" fill="#667085">0%</text>
+<path d="M55 521.2 H525" stroke="#dfe4ec"/>
+<text x="47" y="525.2" text-anchor="end" font-size="10" fill="#667085">25%</text>
+<path d="M55 477.5 H525" stroke="#dfe4ec"/>
+<text x="47" y="481.5" text-anchor="end" font-size="10" fill="#667085">50%</text>
+<path d="M55 433.8 H525" stroke="#dfe4ec"/>
+<text x="47" y="437.8" text-anchor="end" font-size="10" fill="#667085">75%</text>
+<path d="M55 390.0 H525" stroke="#dfe4ec"/>
+<text x="47" y="394.0" text-anchor="end" font-size="10" fill="#667085">100%</text>
+<circle cx="165.5" cy="390.0" r="4.5" fill="#2563eb"/>
+<circle cx="172.5" cy="390.0" r="4.5" fill="#2563eb"/>
+<circle cx="179.5" cy="390.0" r="4.5" fill="#2563eb"/>
+<path d="M156.5 390.0 H188.5" stroke="#111827" stroke-width="2"/>
+<text x="172.5" y="585" text-anchor="middle" font-size="10">login-only</text>
+<text x="172.5" y="411.0" text-anchor="middle" font-size="10" fill="#344054">med 100</text>
+<circle cx="283.0" cy="390.0" r="4.5" fill="#7c3aed"/>
+<circle cx="290.0" cy="390.0" r="4.5" fill="#7c3aed"/>
+<circle cx="297.0" cy="390.0" r="4.5" fill="#7c3aed"/>
+<path d="M274.0 390.0 H306.0" stroke="#111827" stroke-width="2"/>
+<text x="290.0" y="585" text-anchor="middle" font-size="10">steady-mixed</text>
+<text x="290.0" y="411.0" text-anchor="middle" font-size="10" fill="#344054">med 100</text>
+<circle cx="400.5" cy="390.0" r="4.5" fill="#dc2626"/>
+<circle cx="407.5" cy="390.0" r="4.5" fill="#dc2626"/>
+<circle cx="414.5" cy="390.0" r="4.5" fill="#dc2626"/>
+<path d="M391.5 390.0 H423.5" stroke="#111827" stroke-width="2"/>
+<text x="407.5" y="585" text-anchor="middle" font-size="10">mixed-burst</text>
+<text x="407.5" y="411.0" text-anchor="middle" font-size="10" fill="#344054">med 100</text>
+<text x="590" y="378" font-size="14" font-weight="600">Refresh success (%)</text>
+<path d="M590 565.0 H1060" stroke="#dfe4ec"/>
+<text x="582" y="569.0" text-anchor="end" font-size="10" fill="#667085">0%</text>
+<path d="M590 521.2 H1060" stroke="#dfe4ec"/>
+<text x="582" y="525.2" text-anchor="end" font-size="10" fill="#667085">25%</text>
+<path d="M590 477.5 H1060" stroke="#dfe4ec"/>
+<text x="582" y="481.5" text-anchor="end" font-size="10" fill="#667085">50%</text>
+<path d="M590 433.8 H1060" stroke="#dfe4ec"/>
+<text x="582" y="437.8" text-anchor="end" font-size="10" fill="#667085">75%</text>
+<path d="M590 390.0 H1060" stroke="#dfe4ec"/>
+<text x="582" y="394.0" text-anchor="end" font-size="10" fill="#667085">100%</text>
+<circle cx="700.5" cy="390.0" r="4.5" fill="#d97706"/>
+<circle cx="707.5" cy="390.0" r="4.5" fill="#d97706"/>
+<circle cx="714.5" cy="390.0" r="4.5" fill="#d97706"/>
+<path d="M691.5 390.0 H723.5" stroke="#111827" stroke-width="2"/>
+<text x="707.5" y="585" text-anchor="middle" font-size="10">refresh-only</text>
+<text x="707.5" y="411.0" text-anchor="middle" font-size="10" fill="#344054">med 100</text>
+<circle cx="818.0" cy="390.0" r="4.5" fill="#7c3aed"/>
+<circle cx="825.0" cy="390.0" r="4.5" fill="#7c3aed"/>
+<circle cx="832.0" cy="390.0" r="4.5" fill="#7c3aed"/>
+<path d="M809.0 390.0 H841.0" stroke="#111827" stroke-width="2"/>
+<text x="825.0" y="585" text-anchor="middle" font-size="10">steady-mixed</text>
+<text x="825.0" y="411.0" text-anchor="middle" font-size="10" fill="#344054">med 100</text>
+<circle cx="935.5" cy="390.0" r="4.5" fill="#dc2626"/>
+<circle cx="942.5" cy="390.0" r="4.5" fill="#dc2626"/>
+<circle cx="949.5" cy="390.0" r="4.5" fill="#dc2626"/>
+<path d="M926.5 390.0 H958.5" stroke="#111827" stroke-width="2"/>
+<text x="942.5" y="585" text-anchor="middle" font-size="10">mixed-burst</text>
+<text x="942.5" y="411.0" text-anchor="middle" font-size="10" fill="#344054">med 100</text>
+<text x="55" y="630" font-size="11" fill="#667085">Thresholds used in this lab: success >= 99%, login p99 &lt; 2,000 ms, refresh p99 &lt; 500 ms. They are not production SLOs.</text>
+</g></svg>

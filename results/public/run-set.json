@@ -1,0 +1,46 @@
+{
+  "support": {
+    "smoke": [
+      {"label": "smoke", "run": "20260912T140319-smoke"}
+    ],
+    "observation-acceptance": [
+      {"label": "observation", "run": "20260912T140623-mixed"}
+    ]
+  },
+  "exploration": {
+    "login": [
+      {"label": "login-1", "run": "20260912T141124-login"},
+      {"label": "login-5", "run": "20260912T141653-login"},
+      {"label": "login-10", "run": "20260912T142221-login"},
+      {"label": "login-20", "run": "20260912T142830-login"}
+    ],
+    "refresh": [
+      {"label": "refresh-5", "run": "20260912T143340-refresh"},
+      {"label": "refresh-20", "run": "20260912T143911-refresh"},
+      {"label": "refresh-50", "run": "20260912T144443-refresh"},
+      {"label": "refresh-100", "run": "20260912T145014-refresh"}
+    ]
+  },
+  "comparison": {
+    "login-only": [
+      {"label": "login-r1", "run": "20260912T145756-login"},
+      {"label": "login-r2", "run": "20260912T152452-login"},
+      {"label": "login-r3", "run": "20260912T153554-login"}
+    ],
+    "refresh-only": [
+      {"label": "refresh-r1", "run": "20260912T150327-refresh"},
+      {"label": "refresh-r2", "run": "20260912T151919-refresh"},
+      {"label": "refresh-r3", "run": "20260912T153023-refresh"}
+    ],
+    "steady-mixed": [
+      {"label": "mixed-r1", "run": "20260912T150811-mixed"},
+      {"label": "mixed-r2", "run": "20260912T151344-mixed"},
+      {"label": "mixed-r3", "run": "20260912T154125-mixed"}
+    ],
+    "mixed-burst": [
+      {"label": "burst-r1", "run": "20260912T154735-mixed-burst"},
+      {"label": "burst-r2", "run": "20260912T155307-mixed-burst"},
+      {"label": "burst-r3", "run": "20260912T155843-mixed-burst"}
+    ]
+  }
+}

@@ -116,14 +116,25 @@ def run(args):
                 'seconds': args.seconds, 'vus': args.vus, 'users': 1000,
                 'keycloak': '26.7.3', 'postgres': '17.6', 'k6': '1.8.1',
                 'measurement_status': 'started'}
+    p = command(['git', 'rev-parse', 'HEAD'], cwd=ROOT, capture_output=True, text=True)
+    manifest['git_head'] = p.stdout.strip()
+    p = command(['git', 'status', '--porcelain', '--untracked-files=no'], cwd=ROOT, capture_output=True, text=True)
+    manifest['git_dirty'] = bool(p.stdout.strip())
     # No hostname, user name, paths, env or full docker inspect in metadata.
-    p = command(['docker', 'info', '--format', '{{.Architecture}}'], capture_output=True, text=True)
-    manifest['architecture'] = p.stdout.strip()
+    p = command(['docker', 'info', '--format',
+                 '{"architecture":"{{.Architecture}}","cpus":{{.NCPU}},"memory_bytes":{{.MemTotal}}}'],
+                capture_output=True, text=True)
+    manifest['docker_vm'] = json.loads(p.stdout)
+    manifest['architecture'] = manifest['docker_vm']['architecture']
     image_ids = {}
+    image_architectures = {}
     for name in ['oidc-load-lab-keycloak:26.7.3', 'postgres:17.6', 'grafana/k6:1.8.1']:
         p = subprocess.run(['docker', 'image', 'inspect', '--format', '{{.Id}}', name], capture_output=True, text=True)
         image_ids[name] = p.stdout.strip() if p.returncode == 0 else 'not-pulled-yet'
+        p = subprocess.run(['docker', 'image', 'inspect', '--format', '{{.Architecture}}', name], capture_output=True, text=True)
+        image_architectures[name] = p.stdout.strip() if p.returncode == 0 else 'not-pulled-yet'
     manifest['image_ids'] = image_ids
+    manifest['image_architectures'] = image_architectures
     (folder / 'manifest.json').write_text(json.dumps(manifest, indent=2))
     stop = threading.Event()
     watcher = threading.Thread(target=observe, args=(stop, folder, time.monotonic()), daemon=True)
@@ -145,6 +156,9 @@ def run(args):
         p = subprocess.run(['docker', 'image', 'inspect', '--format', '{{.Id}}', 'grafana/k6:1.8.1'], capture_output=True, text=True)
         if p.returncode == 0:
             manifest['image_ids']['grafana/k6:1.8.1'] = p.stdout.strip()
+        p = subprocess.run(['docker', 'image', 'inspect', '--format', '{{.Architecture}}', 'grafana/k6:1.8.1'], capture_output=True, text=True)
+        if p.returncode == 0:
+            manifest['image_architectures']['grafana/k6:1.8.1'] = p.stdout.strip()
         (folder / 'manifest.json').write_text(json.dumps(manifest, indent=2))
     print(f'Run {folder.name}: exit={code}. Run report to review evidence; nonzero is not a capacity result by itself.')
     return code
