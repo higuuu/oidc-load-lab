@@ -13,12 +13,16 @@ SOURCE_FILES = [
     'tests/config.test.mjs', 'tests/protocol.test.mjs', 'tests/test_report.py', 'tests/test_analyze_results.py',
     'docs/experiment.md', 'docs/architecture.md', 'docs/publication.md', 'docs/validation.md',
     'docs/mac-mini-handoff.md',
+    'scripts/build_article.py',
 ]
 RESULT_FILES = [
     'results/environment.md', 'results/experiment-ledger.md', 'results/final-report.md',
     'results/public/run-set.json', 'results/public/comparison-summary.json',
     'results/public/condition-variability.svg', 'results/public/traffic-timeline.svg',
     'results/public/resource-timeline.svg',
+    'article/README.md', 'article/qiita.md', 'article/pr1-review.md',
+    'article/generated-results.md', 'article/evidence-check.json',
+    'article/figures/latency-and-cpu.svg', 'article/figures/exploration-discrepancy.svg',
 ]
 FILES = SOURCE_FILES + RESULT_FILES
 PATTERNS = {

@@ -10,6 +10,8 @@ results/*
 !results/public/**
 dist/
 __pycache__/
+.venv-article/
+article/.preview/
 *.pyc
 .DS_Store
 *.pem

@@ -10,6 +10,13 @@ SPEC.loader.exec_module(MODULE)
 
 
 class AnalyzeResultsTest(unittest.TestCase):
+    def test_all_missing_stats_stay_unknown(self):
+        self.assertEqual(MODULE.stats([None]), {'median': None, 'min': None, 'max': None})
+
+    def test_missing_wait_observation_does_not_become_zero(self):
+        trials = [dict(flows={}, resources={}, db_waiting_peak=v, dropped_all_phases=0) for v in [0, None]]
+        self.assertIsNone(MODULE.group_summary(trials)['db_waiting_peak'])
+
     def test_stats_uses_trial_median_and_range(self):
         self.assertEqual(MODULE.stats([82, 76, 76]), {'median': 76.0, 'min': 76.0, 'max': 82.0})
 

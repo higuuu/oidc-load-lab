@@ -1,0 +1,14 @@
+{
+  "reviewed_pr_head": "10fe2ac519ff23fd4505907040a37f35be854f4f",
+  "source_sha256": "4e35ea02a1ecb7efe01a384a011041c5aeb3ea31cc6c0b4809afee78718b059c",
+  "comparison_trials_checked": 12,
+  "observation_errors_reported": {
+    "refresh-r1": 1,
+    "mixed-r1": 1
+  },
+  "evidence_level": "published per-run aggregates; raw samples and manifests unavailable in this checkout",
+  "checks": [
+    "group summaries recomputed from all 12 published trials",
+    "counts, success, duration, VUs, dropped and observation presence reconciled"
+  ]
+}

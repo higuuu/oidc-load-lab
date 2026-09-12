@@ -26,6 +26,8 @@ def fmt(value, digits=2):
 
 def stats(values):
     values = [float(value) for value in values if value is not None]
+    if not values:
+        return {'median': None, 'min': None, 'max': None}
     return {'median': fmt(median(values)), 'min': fmt(min(values)), 'max': fmt(max(values))}
 
 
@@ -59,8 +61,8 @@ def public_trial(label, run):
         role: {
             'cpu_median_pct': fmt(containers.get(role, {}).get('cpu_pct_median')),
             'cpu_peak_pct': fmt(containers.get(role, {}).get('cpu_pct_peak')),
-            'memory_median_mib': fmt((containers.get(role, {}).get('memory_bytes_median') or 0) / 1048576),
-            'memory_peak_mib': fmt((containers.get(role, {}).get('memory_bytes_peak') or 0) / 1048576),
+            'memory_median_mib': fmt(containers[role]['memory_bytes_median'] / 1048576) if containers[role].get('memory_bytes_median') is not None else None,
+            'memory_peak_mib': fmt(containers[role]['memory_bytes_peak'] / 1048576) if containers[role].get('memory_bytes_peak') is not None else None,
         }
         for role in ['keycloak', 'db', 'k6'] if role in containers
     }
@@ -95,7 +97,8 @@ def group_summary(trials):
         if any(values):
             result[role + '_cpu_median_pct'] = stats([row.get('cpu_median_pct') for row in values])
             result[role + '_cpu_peak_pct'] = stats([row.get('cpu_peak_pct') for row in values])
-    result['db_waiting_peak'] = max((trial['db_waiting_peak'] or 0) for trial in trials)
+    waiting = [trial['db_waiting_peak'] for trial in trials]
+    result['db_waiting_peak'] = max(waiting) if waiting and all(value is not None for value in waiting) else None
     result['dropped_all_phases'] = sum(trial['dropped_all_phases'] for trial in trials)
     return result
 
