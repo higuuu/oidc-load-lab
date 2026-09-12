@@ -4,7 +4,7 @@
 
 Keycloakのログイン・Refresh Token更新・混在を、Mac mini / メモリ24GB / 土日で比較するための公開用実験キットです。認証処理とトークン更新の負荷を扱います。ドメイン権限判定の性能評価は含みません。
 
-**現在は準備段階です。Docker上の実接続・性能測定は未実施です。** 構文・構成・モックによる検証範囲は [validation.md](docs/validation.md) を参照してください。実測前の数値をベンチマーク結果として掲載しないでください。
+2026-09-12にMac mini 24GBで実Keycloakへのsmokeと比較実験を実施しました。対象機で確認した範囲は [validation.md](docs/validation.md)、全試行・集計・限界は [最終報告](results/final-report.md) を参照してください。これは単一Mac上の比較であり、本番容量や他環境の性能を保証しません。
 
 ## 最初に用意するもの
 
@@ -49,7 +49,13 @@ python3 scripts/report.py <results内の実験フォルダ名>
 python3 scripts/lab.py stop
 ```
 
-`report.md` / `aggregate.json` は集計、`timeline.svg` は5秒ごとの試行・成功率とp99の図、`samples.json` は時系列、`host.jsonl` はコンテナとDB統計、`metrics-*.prom` はKeycloakメトリクスです。すべて既定ではGit対象外です。閾値違反でも集計を実行し、失敗した試行を残します。`summary.json` がなければ、まず `console.log` をローカルで確認してください。
+`report.md` / `aggregate.json` は集計、`timeline.svg` は5秒ごとの試行開始数・成功完了数/秒とp99の図、`samples.json` は時系列、`host.jsonl` はコンテナとDB統計、`metrics-*.prom` はKeycloakメトリクスです。各runの生データはGit対象外です。閾値違反でも集計を実行し、失敗した試行を残します。`summary.json` がなければ、まず `console.log` をローカルで確認してください。
+
+公開レビュー用の集約結果は `results/final-report.md` と `results/public/` に限定しています。ローカルの全runから同じ集約を作るには次を実行します。
+
+```sh
+python3 scripts/analyze_results.py
+```
 
 ## 何を比較できるか
 
@@ -75,7 +81,7 @@ python3 scripts/public_bundle.py --export
 `dist/oidc-load-lab/` に公開対象だけを書き出します。**後で作るGitリポジトリには、この中身を入れてください。** 研究用親ディレクトリや `results/` をまとめてコミットしないでください。書き出し済みディレクトリが存在する場合は上書きせず停止します。
 
 - 公開対象を明示列挙し、秘密鍵・JWT・一部クラウドトークン・個人ホームパスのパターンを検査。
-- `.env`、インポートデータ、鍵を含みうるDB、生ログ、観測データを除外。
+- `.env`、インポートデータ、鍵を含みうるDB、生ログ、run単位の観測データを除外。レビュー済みの集約結果だけを明示列挙。
 - 環境変数一覧・完全なDocker inspect・個人のホスト名を収集しない。
 - 検査はすべての機密を検出できる保証ではありません。結果公開時の手順は [publication.md](docs/publication.md)。
 

@@ -2,7 +2,12 @@
 .env.*
 !.env.example
 .runtime/
-results/
+results/*
+!results/environment.md
+!results/experiment-ledger.md
+!results/final-report.md
+!results/public/
+!results/public/**
 dist/
 __pycache__/
 *.pyc

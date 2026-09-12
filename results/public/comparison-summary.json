@@ -1,0 +1,1414 @@
+{
+  "status": "reviewed local experiment aggregates; not production capacity evidence",
+  "method": {
+    "comparison_trials_per_condition": 3,
+    "warmup_seconds": 60,
+    "measure_seconds": 180,
+    "time_axis": "seconds since first measured attempt",
+    "cpu_note": "Docker CPU percentage; 100% is one CPU core"
+  },
+  "support": {
+    "smoke": [
+      {
+        "label": "smoke",
+        "run": "20260912T140319-smoke",
+        "mode": "smoke",
+        "seconds": 180,
+        "login_rate": null,
+        "refresh_average_rate": null,
+        "refresh_peak_rate": null,
+        "vus_per_scenario": 100,
+        "exit_code": 0,
+        "dropped_all_phases": 0,
+        "complete_samples": true,
+        "flows": {
+          "smoke": {
+            "planned": 1,
+            "attempted": 1,
+            "successful": 1,
+            "success_pct": 100.0,
+            "p95_ms": 607.0,
+            "p99_ms": 607.0,
+            "samples": 1
+          }
+        },
+        "resources": {},
+        "db_active_peak": null,
+        "db_waiting_peak": null,
+        "agroal_awaiting_peak": null,
+        "gc_pause_delta_s": null,
+        "observation_samples": 0,
+        "observation_errors": 0
+      }
+    ],
+    "observation-acceptance": [
+      {
+        "label": "observation",
+        "run": "20260912T140623-mixed",
+        "mode": "mixed",
+        "seconds": 60,
+        "login_rate": 1,
+        "refresh_average_rate": 5,
+        "refresh_peak_rate": 5,
+        "vus_per_scenario": 100,
+        "exit_code": 0,
+        "dropped_all_phases": 0,
+        "complete_samples": true,
+        "flows": {
+          "login": {
+            "planned": 60,
+            "attempted": 61,
+            "successful": 61,
+            "success_pct": 100.0,
+            "p95_ms": 56.0,
+            "p99_ms": 60.4,
+            "samples": 61
+          },
+          "refresh": {
+            "planned": 300,
+            "attempted": 300,
+            "successful": 300,
+            "success_pct": 100.0,
+            "p95_ms": 19.0,
+            "p99_ms": 20.01,
+            "samples": 300
+          }
+        },
+        "resources": {
+          "keycloak": {
+            "cpu_median_pct": 16.45,
+            "cpu_peak_pct": 23.75,
+            "memory_median_mib": 1113.09,
+            "memory_peak_mib": 1113.09
+          },
+          "db": {
+            "cpu_median_pct": 1.05,
+            "cpu_peak_pct": 3.59,
+            "memory_median_mib": 72.29,
+            "memory_peak_mib": 73.34
+          },
+          "k6": {
+            "cpu_median_pct": 1.67,
+            "cpu_peak_pct": 1.89,
+            "memory_median_mib": 118.2,
+            "memory_peak_mib": 118.6
+          }
+        },
+        "db_active_peak": 1,
+        "db_waiting_peak": 0,
+        "agroal_awaiting_peak": 0.0,
+        "gc_pause_delta_s": 0.023,
+        "observation_samples": 9,
+        "observation_errors": 0
+      }
+    ]
+  },
+  "exploration": {
+    "login": [
+      {
+        "label": "login-1",
+        "run": "20260912T141124-login",
+        "mode": "login",
+        "seconds": 180,
+        "login_rate": 1,
+        "refresh_average_rate": null,
+        "refresh_peak_rate": null,
+        "vus_per_scenario": 100,
+        "exit_code": 0,
+        "dropped_all_phases": 0,
+        "complete_samples": true,
+        "flows": {
+          "login": {
+            "planned": 180,
+            "attempted": 181,
+            "successful": 181,
+            "success_pct": 100.0,
+            "p95_ms": 107.0,
+            "p99_ms": 109.2,
+            "samples": 181
+          }
+        },
+        "resources": {
+          "keycloak": {
+            "cpu_median_pct": 11.2,
+            "cpu_peak_pct": 16.56,
+            "memory_median_mib": 1121.28,
+            "memory_peak_mib": 1124.35
+          },
+          "db": {
+            "cpu_median_pct": 0.17,
+            "cpu_peak_pct": 3.66,
+            "memory_median_mib": 69.72,
+            "memory_peak_mib": 70.25
+          },
+          "k6": {
+            "cpu_median_pct": 0.73,
+            "cpu_peak_pct": 4.21,
+            "memory_median_mib": 78.21,
+            "memory_peak_mib": 88.72
+          }
+        },
+        "db_active_peak": 1,
+        "db_waiting_peak": 0,
+        "agroal_awaiting_peak": 0.0,
+        "gc_pause_delta_s": 0.036,
+        "observation_samples": 26,
+        "observation_errors": 0
+      },
+      {
+        "label": "login-5",
+        "run": "20260912T141653-login",
+        "mode": "login",
+        "seconds": 180,
+        "login_rate": 5,
+        "refresh_average_rate": null,
+        "refresh_peak_rate": null,
+        "vus_per_scenario": 100,
+        "exit_code": 0,
+        "dropped_all_phases": 0,
+        "complete_samples": true,
+        "flows": {
+          "login": {
+            "planned": 900,
+            "attempted": 900,
+            "successful": 900,
+            "success_pct": 100.0,
+            "p95_ms": 83.0,
+            "p99_ms": 87.0,
+            "samples": 900
+          }
+        },
+        "resources": {
+          "keycloak": {
+            "cpu_median_pct": 40.49,
+            "cpu_peak_pct": 47.32,
+            "memory_median_mib": 1127.42,
+            "memory_peak_mib": 1143.81
+          },
+          "db": {
+            "cpu_median_pct": 0.36,
+            "cpu_peak_pct": 2.7,
+            "memory_median_mib": 70.82,
+            "memory_peak_mib": 71.99
+          },
+          "k6": {
+            "cpu_median_pct": 0.73,
+            "cpu_peak_pct": 2.16,
+            "memory_median_mib": 89.52,
+            "memory_peak_mib": 89.94
+          }
+        },
+        "db_active_peak": 2,
+        "db_waiting_peak": 0,
+        "agroal_awaiting_peak": 0.0,
+        "gc_pause_delta_s": 0.151,
+        "observation_samples": 26,
+        "observation_errors": 0
+      },
+      {
+        "label": "login-10",
+        "run": "20260912T142221-login",
+        "mode": "login",
+        "seconds": 180,
+        "login_rate": 10,
+        "refresh_average_rate": null,
+        "refresh_peak_rate": null,
+        "vus_per_scenario": 100,
+        "exit_code": 0,
+        "dropped_all_phases": 0,
+        "complete_samples": true,
+        "flows": {
+          "login": {
+            "planned": 1800,
+            "attempted": 1801,
+            "successful": 1801,
+            "success_pct": 100.0,
+            "p95_ms": 67.0,
+            "p99_ms": 71.0,
+            "samples": 1801
+          }
+        },
+        "resources": {
+          "keycloak": {
+            "cpu_median_pct": 64.41,
+            "cpu_peak_pct": 77.04,
+            "memory_median_mib": 1140.74,
+            "memory_peak_mib": 1148.93
+          },
+          "db": {
+            "cpu_median_pct": 0.42,
+            "cpu_peak_pct": 4.69,
+            "memory_median_mib": 72.54,
+            "memory_peak_mib": 74.56
+          },
+          "k6": {
+            "cpu_median_pct": 0.96,
+            "cpu_peak_pct": 2.44,
+            "memory_median_mib": 89.81,
+            "memory_peak_mib": 90.11
+          }
+        },
+        "db_active_peak": 1,
+        "db_waiting_peak": 0,
+        "agroal_awaiting_peak": 0.0,
+        "gc_pause_delta_s": 0.119,
+        "observation_samples": 26,
+        "observation_errors": 0
+      },
+      {
+        "label": "login-20",
+        "run": "20260912T142830-login",
+        "mode": "login",
+        "seconds": 180,
+        "login_rate": 20,
+        "refresh_average_rate": null,
+        "refresh_peak_rate": null,
+        "vus_per_scenario": 100,
+        "exit_code": 0,
+        "dropped_all_phases": 0,
+        "complete_samples": true,
+        "flows": {
+          "login": {
+            "planned": 3600,
+            "attempted": 3601,
+            "successful": 3601,
+            "success_pct": 100.0,
+            "p95_ms": 25.0,
+            "p99_ms": 27.0,
+            "samples": 3601
+          }
+        },
+        "resources": {
+          "keycloak": {
+            "cpu_median_pct": 45.63,
+            "cpu_peak_pct": 54.71,
+            "memory_median_mib": 1164.29,
+            "memory_peak_mib": 1169.41
+          },
+          "db": {
+            "cpu_median_pct": 0.7,
+            "cpu_peak_pct": 2.66,
+            "memory_median_mib": 75.85,
+            "memory_peak_mib": 79.22
+          },
+          "k6": {
+            "cpu_median_pct": 1.52,
+            "cpu_peak_pct": 2.99,
+            "memory_median_mib": 90.16,
+            "memory_peak_mib": 90.62
+          }
+        },
+        "db_active_peak": 2,
+        "db_waiting_peak": 0,
+        "agroal_awaiting_peak": 0.0,
+        "gc_pause_delta_s": 0.145,
+        "observation_samples": 26,
+        "observation_errors": 0
+      }
+    ],
+    "refresh": [
+      {
+        "label": "refresh-5",
+        "run": "20260912T143340-refresh",
+        "mode": "refresh",
+        "seconds": 180,
+        "login_rate": null,
+        "refresh_average_rate": 5,
+        "refresh_peak_rate": 5,
+        "vus_per_scenario": 100,
+        "exit_code": 0,
+        "dropped_all_phases": 0,
+        "complete_samples": true,
+        "flows": {
+          "refresh": {
+            "planned": 900,
+            "attempted": 900,
+            "successful": 900,
+            "success_pct": 100.0,
+            "p95_ms": 18.0,
+            "p99_ms": 19.0,
+            "samples": 900
+          }
+        },
+        "resources": {
+          "keycloak": {
+            "cpu_median_pct": 8.49,
+            "cpu_peak_pct": 13.09,
+            "memory_median_mib": 1125.38,
+            "memory_peak_mib": 1125.38
+          },
+          "db": {
+            "cpu_median_pct": 0.91,
+            "cpu_peak_pct": 4.15,
+            "memory_median_mib": 72.98,
+            "memory_peak_mib": 74.16
+          },
+          "k6": {
+            "cpu_median_pct": 1.32,
+            "cpu_peak_pct": 1.55,
+            "memory_median_mib": 82.44,
+            "memory_peak_mib": 82.73
+          }
+        },
+        "db_active_peak": 1,
+        "db_waiting_peak": 0,
+        "agroal_awaiting_peak": 0.0,
+        "gc_pause_delta_s": 0,
+        "observation_samples": 26,
+        "observation_errors": 1
+      },
+      {
+        "label": "refresh-20",
+        "run": "20260912T143911-refresh",
+        "mode": "refresh",
+        "seconds": 180,
+        "login_rate": null,
+        "refresh_average_rate": 20,
+        "refresh_peak_rate": 20,
+        "vus_per_scenario": 100,
+        "exit_code": 0,
+        "dropped_all_phases": 0,
+        "complete_samples": true,
+        "flows": {
+          "refresh": {
+            "planned": 3600,
+            "attempted": 3601,
+            "successful": 3601,
+            "success_pct": 100.0,
+            "p95_ms": 15.0,
+            "p99_ms": 16.0,
+            "samples": 3601
+          }
+        },
+        "resources": {
+          "keycloak": {
+            "cpu_median_pct": 24.01,
+            "cpu_peak_pct": 29.81,
+            "memory_median_mib": 1126.4,
+            "memory_peak_mib": 1129.47
+          },
+          "db": {
+            "cpu_median_pct": 2.79,
+            "cpu_peak_pct": 5.74,
+            "memory_median_mib": 83.5,
+            "memory_peak_mib": 84.3
+          },
+          "k6": {
+            "cpu_median_pct": 2.67,
+            "cpu_peak_pct": 5.89,
+            "memory_median_mib": 81.03,
+            "memory_peak_mib": 81.15
+          }
+        },
+        "db_active_peak": 1,
+        "db_waiting_peak": 0,
+        "agroal_awaiting_peak": 0.0,
+        "gc_pause_delta_s": 0.068,
+        "observation_samples": 26,
+        "observation_errors": 0
+      },
+      {
+        "label": "refresh-50",
+        "run": "20260912T144443-refresh",
+        "mode": "refresh",
+        "seconds": 180,
+        "login_rate": null,
+        "refresh_average_rate": 50,
+        "refresh_peak_rate": 50,
+        "vus_per_scenario": 100,
+        "exit_code": 0,
+        "dropped_all_phases": 0,
+        "complete_samples": true,
+        "flows": {
+          "refresh": {
+            "planned": 9000,
+            "attempted": 9001,
+            "successful": 9001,
+            "success_pct": 100.0,
+            "p95_ms": 6.0,
+            "p99_ms": 7.0,
+            "samples": 9001
+          }
+        },
+        "resources": {
+          "keycloak": {
+            "cpu_median_pct": 24.34,
+            "cpu_peak_pct": 43.74,
+            "memory_median_mib": 1128.45,
+            "memory_peak_mib": 1130.5
+          },
+          "db": {
+            "cpu_median_pct": 3.31,
+            "cpu_peak_pct": 5.63,
+            "memory_median_mib": 103.2,
+            "memory_peak_mib": 104.9
+          },
+          "k6": {
+            "cpu_median_pct": 2.17,
+            "cpu_peak_pct": 4.23,
+            "memory_median_mib": 83.45,
+            "memory_peak_mib": 83.82
+          }
+        },
+        "db_active_peak": 1,
+        "db_waiting_peak": 0,
+        "agroal_awaiting_peak": 0.0,
+        "gc_pause_delta_s": 0.099,
+        "observation_samples": 26,
+        "observation_errors": 0
+      },
+      {
+        "label": "refresh-100",
+        "run": "20260912T145014-refresh",
+        "mode": "refresh",
+        "seconds": 180,
+        "login_rate": null,
+        "refresh_average_rate": 100,
+        "refresh_peak_rate": 100,
+        "vus_per_scenario": 100,
+        "exit_code": 0,
+        "dropped_all_phases": 0,
+        "complete_samples": true,
+        "flows": {
+          "refresh": {
+            "planned": 18000,
+            "attempted": 18000,
+            "successful": 18000,
+            "success_pct": 100.0,
+            "p95_ms": 4.0,
+            "p99_ms": 5.0,
+            "samples": 18000
+          }
+        },
+        "resources": {
+          "keycloak": {
+            "cpu_median_pct": 30.27,
+            "cpu_peak_pct": 42.43,
+            "memory_median_mib": 1138.69,
+            "memory_peak_mib": 1145.86
+          },
+          "db": {
+            "cpu_median_pct": 4.77,
+            "cpu_peak_pct": 7.07,
+            "memory_median_mib": 135.85,
+            "memory_peak_mib": 138.9
+          },
+          "k6": {
+            "cpu_median_pct": 3.17,
+            "cpu_peak_pct": 4.97,
+            "memory_median_mib": 83.69,
+            "memory_peak_mib": 85.85
+          }
+        },
+        "db_active_peak": 2,
+        "db_waiting_peak": 0,
+        "agroal_awaiting_peak": 0.0,
+        "gc_pause_delta_s": 0.128,
+        "observation_samples": 26,
+        "observation_errors": 0
+      }
+    ]
+  },
+  "comparison": {
+    "login-only": [
+      {
+        "label": "login-r1",
+        "run": "20260912T145756-login",
+        "mode": "login",
+        "seconds": 180,
+        "login_rate": 20,
+        "refresh_average_rate": null,
+        "refresh_peak_rate": null,
+        "vus_per_scenario": 100,
+        "exit_code": 0,
+        "dropped_all_phases": 0,
+        "complete_samples": true,
+        "flows": {
+          "login": {
+            "planned": 3600,
+            "attempted": 3601,
+            "successful": 3601,
+            "success_pct": 100.0,
+            "p95_ms": 69.0,
+            "p99_ms": 75.0,
+            "samples": 3601
+          }
+        },
+        "resources": {
+          "keycloak": {
+            "cpu_median_pct": 125.67,
+            "cpu_peak_pct": 138.9,
+            "memory_median_mib": 1160.19,
+            "memory_peak_mib": 1165.31
+          },
+          "db": {
+            "cpu_median_pct": 0.71,
+            "cpu_peak_pct": 2.36,
+            "memory_median_mib": 75.4,
+            "memory_peak_mib": 79.12
+          },
+          "k6": {
+            "cpu_median_pct": 1.49,
+            "cpu_peak_pct": 2.85,
+            "memory_median_mib": 90.14,
+            "memory_peak_mib": 90.39
+          }
+        },
+        "db_active_peak": 1,
+        "db_waiting_peak": 0,
+        "agroal_awaiting_peak": 0.0,
+        "gc_pause_delta_s": 0.157,
+        "observation_samples": 26,
+        "observation_errors": 0
+      },
+      {
+        "label": "login-r2",
+        "run": "20260912T152452-login",
+        "mode": "login",
+        "seconds": 180,
+        "login_rate": 20,
+        "refresh_average_rate": null,
+        "refresh_peak_rate": null,
+        "vus_per_scenario": 100,
+        "exit_code": 0,
+        "dropped_all_phases": 0,
+        "complete_samples": true,
+        "flows": {
+          "login": {
+            "planned": 3600,
+            "attempted": 3601,
+            "successful": 3601,
+            "success_pct": 100.0,
+            "p95_ms": 69.0,
+            "p99_ms": 73.0,
+            "samples": 3601
+          }
+        },
+        "resources": {
+          "keycloak": {
+            "cpu_median_pct": 126.59,
+            "cpu_peak_pct": 137.91,
+            "memory_median_mib": 1155.07,
+            "memory_peak_mib": 1160.19
+          },
+          "db": {
+            "cpu_median_pct": 0.71,
+            "cpu_peak_pct": 2.34,
+            "memory_median_mib": 75.54,
+            "memory_peak_mib": 79.49
+          },
+          "k6": {
+            "cpu_median_pct": 1.52,
+            "cpu_peak_pct": 3.22,
+            "memory_median_mib": 90.16,
+            "memory_peak_mib": 92.26
+          }
+        },
+        "db_active_peak": 1,
+        "db_waiting_peak": 0,
+        "agroal_awaiting_peak": 0.0,
+        "gc_pause_delta_s": 0.163,
+        "observation_samples": 26,
+        "observation_errors": 0
+      },
+      {
+        "label": "login-r3",
+        "run": "20260912T153554-login",
+        "mode": "login",
+        "seconds": 180,
+        "login_rate": 20,
+        "refresh_average_rate": null,
+        "refresh_peak_rate": null,
+        "vus_per_scenario": 100,
+        "exit_code": 0,
+        "dropped_all_phases": 0,
+        "complete_samples": true,
+        "flows": {
+          "login": {
+            "planned": 3600,
+            "attempted": 3601,
+            "successful": 3601,
+            "success_pct": 100.0,
+            "p95_ms": 70.0,
+            "p99_ms": 75.0,
+            "samples": 3601
+          }
+        },
+        "resources": {
+          "keycloak": {
+            "cpu_median_pct": 128.74,
+            "cpu_peak_pct": 141.14,
+            "memory_median_mib": 1157.12,
+            "memory_peak_mib": 1163.26
+          },
+          "db": {
+            "cpu_median_pct": 0.73,
+            "cpu_peak_pct": 2.31,
+            "memory_median_mib": 75.63,
+            "memory_peak_mib": 79.37
+          },
+          "k6": {
+            "cpu_median_pct": 1.46,
+            "cpu_peak_pct": 2.85,
+            "memory_median_mib": 90.13,
+            "memory_peak_mib": 92.31
+          }
+        },
+        "db_active_peak": 1,
+        "db_waiting_peak": 0,
+        "agroal_awaiting_peak": 0.0,
+        "gc_pause_delta_s": 0.154,
+        "observation_samples": 26,
+        "observation_errors": 0
+      }
+    ],
+    "refresh-only": [
+      {
+        "label": "refresh-r1",
+        "run": "20260912T150327-refresh",
+        "mode": "refresh",
+        "seconds": 180,
+        "login_rate": null,
+        "refresh_average_rate": 100,
+        "refresh_peak_rate": 100,
+        "vus_per_scenario": 100,
+        "exit_code": 0,
+        "dropped_all_phases": 0,
+        "complete_samples": true,
+        "flows": {
+          "refresh": {
+            "planned": 18000,
+            "attempted": 18000,
+            "successful": 18000,
+            "success_pct": 100.0,
+            "p95_ms": 4.0,
+            "p99_ms": 5.0,
+            "samples": 18000
+          }
+        },
+        "resources": {
+          "keycloak": {
+            "cpu_median_pct": 30.02,
+            "cpu_peak_pct": 36.33,
+            "memory_median_mib": 1133.57,
+            "memory_peak_mib": 1139.71
+          },
+          "db": {
+            "cpu_median_pct": 4.64,
+            "cpu_peak_pct": 7.24,
+            "memory_median_mib": 136.4,
+            "memory_peak_mib": 139.2
+          },
+          "k6": {
+            "cpu_median_pct": 3.17,
+            "cpu_peak_pct": 4.99,
+            "memory_median_mib": 83.71,
+            "memory_peak_mib": 85.89
+          }
+        },
+        "db_active_peak": 2,
+        "db_waiting_peak": 0,
+        "agroal_awaiting_peak": 0.0,
+        "gc_pause_delta_s": 0.122,
+        "observation_samples": 26,
+        "observation_errors": 1
+      },
+      {
+        "label": "refresh-r2",
+        "run": "20260912T151919-refresh",
+        "mode": "refresh",
+        "seconds": 180,
+        "login_rate": null,
+        "refresh_average_rate": 100,
+        "refresh_peak_rate": 100,
+        "vus_per_scenario": 100,
+        "exit_code": 0,
+        "dropped_all_phases": 0,
+        "complete_samples": true,
+        "flows": {
+          "refresh": {
+            "planned": 18000,
+            "attempted": 18000,
+            "successful": 18000,
+            "success_pct": 100.0,
+            "p95_ms": 4.0,
+            "p99_ms": 5.0,
+            "samples": 18000
+          }
+        },
+        "resources": {
+          "keycloak": {
+            "cpu_median_pct": 29.87,
+            "cpu_peak_pct": 37.83,
+            "memory_median_mib": 1132.54,
+            "memory_peak_mib": 1139.71
+          },
+          "db": {
+            "cpu_median_pct": 4.71,
+            "cpu_peak_pct": 8.56,
+            "memory_median_mib": 136.55,
+            "memory_peak_mib": 140.2
+          },
+          "k6": {
+            "cpu_median_pct": 3.23,
+            "cpu_peak_pct": 4.9,
+            "memory_median_mib": 85.61,
+            "memory_peak_mib": 87.8
+          }
+        },
+        "db_active_peak": 1,
+        "db_waiting_peak": 0,
+        "agroal_awaiting_peak": 0.0,
+        "gc_pause_delta_s": 0.142,
+        "observation_samples": 26,
+        "observation_errors": 0
+      },
+      {
+        "label": "refresh-r3",
+        "run": "20260912T153023-refresh",
+        "mode": "refresh",
+        "seconds": 180,
+        "login_rate": null,
+        "refresh_average_rate": 100,
+        "refresh_peak_rate": 100,
+        "vus_per_scenario": 100,
+        "exit_code": 0,
+        "dropped_all_phases": 0,
+        "complete_samples": true,
+        "flows": {
+          "refresh": {
+            "planned": 18000,
+            "attempted": 18000,
+            "successful": 18000,
+            "success_pct": 100.0,
+            "p95_ms": 4.0,
+            "p99_ms": 5.0,
+            "samples": 18000
+          }
+        },
+        "resources": {
+          "keycloak": {
+            "cpu_median_pct": 30.63,
+            "cpu_peak_pct": 50.63,
+            "memory_median_mib": 1135.62,
+            "memory_peak_mib": 1141.76
+          },
+          "db": {
+            "cpu_median_pct": 4.71,
+            "cpu_peak_pct": 6.79,
+            "memory_median_mib": 137.6,
+            "memory_peak_mib": 141.0
+          },
+          "k6": {
+            "cpu_median_pct": 3.1,
+            "cpu_peak_pct": 4.86,
+            "memory_median_mib": 85.6,
+            "memory_peak_mib": 87.87
+          }
+        },
+        "db_active_peak": 1,
+        "db_waiting_peak": 0,
+        "agroal_awaiting_peak": 0.0,
+        "gc_pause_delta_s": 0.129,
+        "observation_samples": 26,
+        "observation_errors": 0
+      }
+    ],
+    "steady-mixed": [
+      {
+        "label": "mixed-r1",
+        "run": "20260912T150811-mixed",
+        "mode": "mixed",
+        "seconds": 180,
+        "login_rate": 20,
+        "refresh_average_rate": 100,
+        "refresh_peak_rate": 100,
+        "vus_per_scenario": 100,
+        "exit_code": 0,
+        "dropped_all_phases": 0,
+        "complete_samples": true,
+        "flows": {
+          "login": {
+            "planned": 3600,
+            "attempted": 3600,
+            "successful": 3600,
+            "success_pct": 100.0,
+            "p95_ms": 71.0,
+            "p99_ms": 82.0,
+            "samples": 3600
+          },
+          "refresh": {
+            "planned": 18000,
+            "attempted": 18001,
+            "successful": 18001,
+            "success_pct": 100.0,
+            "p95_ms": 4.0,
+            "p99_ms": 6.0,
+            "samples": 18001
+          }
+        },
+        "resources": {
+          "keycloak": {
+            "cpu_median_pct": 145.75,
+            "cpu_peak_pct": 154.84,
+            "memory_median_mib": 1206.27,
+            "memory_peak_mib": 1213.44
+          },
+          "db": {
+            "cpu_median_pct": 3.96,
+            "cpu_peak_pct": 5.93,
+            "memory_median_mib": 177.8,
+            "memory_peak_mib": 184.9
+          },
+          "k6": {
+            "cpu_median_pct": 5.03,
+            "cpu_peak_pct": 5.6,
+            "memory_median_mib": 162.8,
+            "memory_peak_mib": 165.1
+          }
+        },
+        "db_active_peak": 1,
+        "db_waiting_peak": 0,
+        "agroal_awaiting_peak": 0.0,
+        "gc_pause_delta_s": 0.172,
+        "observation_samples": 26,
+        "observation_errors": 1
+      },
+      {
+        "label": "mixed-r2",
+        "run": "20260912T151344-mixed",
+        "mode": "mixed",
+        "seconds": 180,
+        "login_rate": 20,
+        "refresh_average_rate": 100,
+        "refresh_peak_rate": 100,
+        "vus_per_scenario": 100,
+        "exit_code": 0,
+        "dropped_all_phases": 0,
+        "complete_samples": true,
+        "flows": {
+          "login": {
+            "planned": 3600,
+            "attempted": 3600,
+            "successful": 3600,
+            "success_pct": 100.0,
+            "p95_ms": 70.0,
+            "p99_ms": 76.0,
+            "samples": 3600
+          },
+          "refresh": {
+            "planned": 18000,
+            "attempted": 18001,
+            "successful": 18001,
+            "success_pct": 100.0,
+            "p95_ms": 4.0,
+            "p99_ms": 5.0,
+            "samples": 18001
+          }
+        },
+        "resources": {
+          "keycloak": {
+            "cpu_median_pct": 144.39,
+            "cpu_peak_pct": 155.21,
+            "memory_median_mib": 1202.18,
+            "memory_peak_mib": 1210.37
+          },
+          "db": {
+            "cpu_median_pct": 4.2,
+            "cpu_peak_pct": 20.08,
+            "memory_median_mib": 178.45,
+            "memory_peak_mib": 187.8
+          },
+          "k6": {
+            "cpu_median_pct": 2.99,
+            "cpu_peak_pct": 3.28,
+            "memory_median_mib": 162.75,
+            "memory_peak_mib": 164.9
+          }
+        },
+        "db_active_peak": 1,
+        "db_waiting_peak": 0,
+        "agroal_awaiting_peak": 0.0,
+        "gc_pause_delta_s": 0.178,
+        "observation_samples": 26,
+        "observation_errors": 0
+      },
+      {
+        "label": "mixed-r3",
+        "run": "20260912T154125-mixed",
+        "mode": "mixed",
+        "seconds": 180,
+        "login_rate": 20,
+        "refresh_average_rate": 100,
+        "refresh_peak_rate": 100,
+        "vus_per_scenario": 100,
+        "exit_code": 0,
+        "dropped_all_phases": 0,
+        "complete_samples": true,
+        "flows": {
+          "login": {
+            "planned": 3600,
+            "attempted": 3601,
+            "successful": 3601,
+            "success_pct": 100.0,
+            "p95_ms": 70.0,
+            "p99_ms": 76.0,
+            "samples": 3601
+          },
+          "refresh": {
+            "planned": 18000,
+            "attempted": 18001,
+            "successful": 18001,
+            "success_pct": 100.0,
+            "p95_ms": 4.0,
+            "p99_ms": 6.0,
+            "samples": 18001
+          }
+        },
+        "resources": {
+          "keycloak": {
+            "cpu_median_pct": 145.86,
+            "cpu_peak_pct": 181.16,
+            "memory_median_mib": 1201.15,
+            "memory_peak_mib": 1207.3
+          },
+          "db": {
+            "cpu_median_pct": 4.04,
+            "cpu_peak_pct": 5.89,
+            "memory_median_mib": 178.8,
+            "memory_peak_mib": 185.9
+          },
+          "k6": {
+            "cpu_median_pct": 5.12,
+            "cpu_peak_pct": 6.4,
+            "memory_median_mib": 162.8,
+            "memory_peak_mib": 167.2
+          }
+        },
+        "db_active_peak": 2,
+        "db_waiting_peak": 0,
+        "agroal_awaiting_peak": 0.0,
+        "gc_pause_delta_s": 0.204,
+        "observation_samples": 26,
+        "observation_errors": 0
+      }
+    ],
+    "mixed-burst": [
+      {
+        "label": "burst-r1",
+        "run": "20260912T154735-mixed-burst",
+        "mode": "mixed-burst",
+        "seconds": 180,
+        "login_rate": 20,
+        "refresh_average_rate": 100,
+        "refresh_peak_rate": 200,
+        "vus_per_scenario": 100,
+        "exit_code": 0,
+        "dropped_all_phases": 0,
+        "complete_samples": true,
+        "flows": {
+          "login": {
+            "planned": 3600,
+            "attempted": 3601,
+            "successful": 3601,
+            "success_pct": 100.0,
+            "p95_ms": 71.0,
+            "p99_ms": 75.0,
+            "samples": 3601
+          },
+          "refresh": {
+            "planned": 18000,
+            "attempted": 18001,
+            "successful": 18001,
+            "success_pct": 100.0,
+            "p95_ms": 4.0,
+            "p99_ms": 6.0,
+            "samples": 18001
+          }
+        },
+        "resources": {
+          "keycloak": {
+            "cpu_median_pct": 146.36,
+            "cpu_peak_pct": 167.14,
+            "memory_median_mib": 1208.32,
+            "memory_peak_mib": 1217.54
+          },
+          "db": {
+            "cpu_median_pct": 4.26,
+            "cpu_peak_pct": 8.43,
+            "memory_median_mib": 179.75,
+            "memory_peak_mib": 186.7
+          },
+          "k6": {
+            "cpu_median_pct": 3.07,
+            "cpu_peak_pct": 5.26,
+            "memory_median_mib": 165.1,
+            "memory_peak_mib": 169.5
+          }
+        },
+        "db_active_peak": 2,
+        "db_waiting_peak": 0,
+        "agroal_awaiting_peak": 0.0,
+        "gc_pause_delta_s": 0.194,
+        "observation_samples": 26,
+        "observation_errors": 0
+      },
+      {
+        "label": "burst-r2",
+        "run": "20260912T155307-mixed-burst",
+        "mode": "mixed-burst",
+        "seconds": 180,
+        "login_rate": 20,
+        "refresh_average_rate": 100,
+        "refresh_peak_rate": 200,
+        "vus_per_scenario": 100,
+        "exit_code": 0,
+        "dropped_all_phases": 0,
+        "complete_samples": true,
+        "flows": {
+          "login": {
+            "planned": 3600,
+            "attempted": 3601,
+            "successful": 3601,
+            "success_pct": 100.0,
+            "p95_ms": 70.0,
+            "p99_ms": 78.0,
+            "samples": 3601
+          },
+          "refresh": {
+            "planned": 18000,
+            "attempted": 18001,
+            "successful": 18001,
+            "success_pct": 100.0,
+            "p95_ms": 4.0,
+            "p99_ms": 6.0,
+            "samples": 18001
+          }
+        },
+        "resources": {
+          "keycloak": {
+            "cpu_median_pct": 147.24,
+            "cpu_peak_pct": 167.9,
+            "memory_median_mib": 1203.71,
+            "memory_peak_mib": 1211.39
+          },
+          "db": {
+            "cpu_median_pct": 4.4,
+            "cpu_peak_pct": 14.14,
+            "memory_median_mib": 182.95,
+            "memory_peak_mib": 189.6
+          },
+          "k6": {
+            "cpu_median_pct": 3.46,
+            "cpu_peak_pct": 6.67,
+            "memory_median_mib": 164.95,
+            "memory_peak_mib": 167.3
+          }
+        },
+        "db_active_peak": 2,
+        "db_waiting_peak": 0,
+        "agroal_awaiting_peak": 0.0,
+        "gc_pause_delta_s": 0.184,
+        "observation_samples": 26,
+        "observation_errors": 0
+      },
+      {
+        "label": "burst-r3",
+        "run": "20260912T155843-mixed-burst",
+        "mode": "mixed-burst",
+        "seconds": 180,
+        "login_rate": 20,
+        "refresh_average_rate": 100,
+        "refresh_peak_rate": 200,
+        "vus_per_scenario": 100,
+        "exit_code": 0,
+        "dropped_all_phases": 0,
+        "complete_samples": true,
+        "flows": {
+          "login": {
+            "planned": 3600,
+            "attempted": 3600,
+            "successful": 3600,
+            "success_pct": 100.0,
+            "p95_ms": 71.0,
+            "p99_ms": 86.0,
+            "samples": 3600
+          },
+          "refresh": {
+            "planned": 18000,
+            "attempted": 18001,
+            "successful": 18001,
+            "success_pct": 100.0,
+            "p95_ms": 4.0,
+            "p99_ms": 7.0,
+            "samples": 18001
+          }
+        },
+        "resources": {
+          "keycloak": {
+            "cpu_median_pct": 144.82,
+            "cpu_peak_pct": 161.89,
+            "memory_median_mib": 1210.37,
+            "memory_peak_mib": 1219.58
+          },
+          "db": {
+            "cpu_median_pct": 4.31,
+            "cpu_peak_pct": 7.27,
+            "memory_median_mib": 180.9,
+            "memory_peak_mib": 187.8
+          },
+          "k6": {
+            "cpu_median_pct": 3.65,
+            "cpu_peak_pct": 7.3,
+            "memory_median_mib": 165.0,
+            "memory_peak_mib": 167.2
+          }
+        },
+        "db_active_peak": 2,
+        "db_waiting_peak": 0,
+        "agroal_awaiting_peak": 0.0,
+        "gc_pause_delta_s": 0.178,
+        "observation_samples": 26,
+        "observation_errors": 0
+      }
+    ]
+  },
+  "summary": {
+    "login-only": {
+      "trial_count": 3,
+      "login": {
+        "p99_ms": {
+          "median": 75.0,
+          "min": 73.0,
+          "max": 75.0
+        },
+        "success_pct": {
+          "median": 100.0,
+          "min": 100.0,
+          "max": 100.0
+        },
+        "samples": {
+          "min": 3601,
+          "max": 3601
+        }
+      },
+      "keycloak_cpu_median_pct": {
+        "median": 126.59,
+        "min": 125.67,
+        "max": 128.74
+      },
+      "keycloak_cpu_peak_pct": {
+        "median": 138.9,
+        "min": 137.91,
+        "max": 141.14
+      },
+      "db_cpu_median_pct": {
+        "median": 0.71,
+        "min": 0.71,
+        "max": 0.73
+      },
+      "db_cpu_peak_pct": {
+        "median": 2.34,
+        "min": 2.31,
+        "max": 2.36
+      },
+      "k6_cpu_median_pct": {
+        "median": 1.49,
+        "min": 1.46,
+        "max": 1.52
+      },
+      "k6_cpu_peak_pct": {
+        "median": 2.85,
+        "min": 2.85,
+        "max": 3.22
+      },
+      "db_waiting_peak": 0,
+      "dropped_all_phases": 0
+    },
+    "refresh-only": {
+      "trial_count": 3,
+      "refresh": {
+        "p99_ms": {
+          "median": 5.0,
+          "min": 5.0,
+          "max": 5.0
+        },
+        "success_pct": {
+          "median": 100.0,
+          "min": 100.0,
+          "max": 100.0
+        },
+        "samples": {
+          "min": 18000,
+          "max": 18000
+        }
+      },
+      "keycloak_cpu_median_pct": {
+        "median": 30.02,
+        "min": 29.87,
+        "max": 30.63
+      },
+      "keycloak_cpu_peak_pct": {
+        "median": 37.83,
+        "min": 36.33,
+        "max": 50.63
+      },
+      "db_cpu_median_pct": {
+        "median": 4.71,
+        "min": 4.64,
+        "max": 4.71
+      },
+      "db_cpu_peak_pct": {
+        "median": 7.24,
+        "min": 6.79,
+        "max": 8.56
+      },
+      "k6_cpu_median_pct": {
+        "median": 3.17,
+        "min": 3.1,
+        "max": 3.23
+      },
+      "k6_cpu_peak_pct": {
+        "median": 4.9,
+        "min": 4.86,
+        "max": 4.99
+      },
+      "db_waiting_peak": 0,
+      "dropped_all_phases": 0
+    },
+    "steady-mixed": {
+      "trial_count": 3,
+      "login": {
+        "p99_ms": {
+          "median": 76.0,
+          "min": 76.0,
+          "max": 82.0
+        },
+        "success_pct": {
+          "median": 100.0,
+          "min": 100.0,
+          "max": 100.0
+        },
+        "samples": {
+          "min": 3600,
+          "max": 3601
+        }
+      },
+      "refresh": {
+        "p99_ms": {
+          "median": 6.0,
+          "min": 5.0,
+          "max": 6.0
+        },
+        "success_pct": {
+          "median": 100.0,
+          "min": 100.0,
+          "max": 100.0
+        },
+        "samples": {
+          "min": 18001,
+          "max": 18001
+        }
+      },
+      "keycloak_cpu_median_pct": {
+        "median": 145.75,
+        "min": 144.39,
+        "max": 145.86
+      },
+      "keycloak_cpu_peak_pct": {
+        "median": 155.21,
+        "min": 154.84,
+        "max": 181.16
+      },
+      "db_cpu_median_pct": {
+        "median": 4.04,
+        "min": 3.96,
+        "max": 4.2
+      },
+      "db_cpu_peak_pct": {
+        "median": 5.93,
+        "min": 5.89,
+        "max": 20.08
+      },
+      "k6_cpu_median_pct": {
+        "median": 5.03,
+        "min": 2.99,
+        "max": 5.12
+      },
+      "k6_cpu_peak_pct": {
+        "median": 5.6,
+        "min": 3.28,
+        "max": 6.4
+      },
+      "db_waiting_peak": 0,
+      "dropped_all_phases": 0
+    },
+    "mixed-burst": {
+      "trial_count": 3,
+      "login": {
+        "p99_ms": {
+          "median": 78.0,
+          "min": 75.0,
+          "max": 86.0
+        },
+        "success_pct": {
+          "median": 100.0,
+          "min": 100.0,
+          "max": 100.0
+        },
+        "samples": {
+          "min": 3600,
+          "max": 3601
+        }
+      },
+      "refresh": {
+        "p99_ms": {
+          "median": 6.0,
+          "min": 6.0,
+          "max": 7.0
+        },
+        "success_pct": {
+          "median": 100.0,
+          "min": 100.0,
+          "max": 100.0
+        },
+        "samples": {
+          "min": 18001,
+          "max": 18001
+        }
+      },
+      "keycloak_cpu_median_pct": {
+        "median": 146.36,
+        "min": 144.82,
+        "max": 147.24
+      },
+      "keycloak_cpu_peak_pct": {
+        "median": 167.14,
+        "min": 161.89,
+        "max": 167.9
+      },
+      "db_cpu_median_pct": {
+        "median": 4.31,
+        "min": 4.26,
+        "max": 4.4
+      },
+      "db_cpu_peak_pct": {
+        "median": 8.43,
+        "min": 7.27,
+        "max": 14.14
+      },
+      "k6_cpu_median_pct": {
+        "median": 3.46,
+        "min": 3.07,
+        "max": 3.65
+      },
+      "k6_cpu_peak_pct": {
+        "median": 6.67,
+        "min": 5.26,
+        "max": 7.3
+      },
+      "db_waiting_peak": 0,
+      "dropped_all_phases": 0
+    }
+  }
+}
