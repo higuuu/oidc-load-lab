@@ -5,8 +5,21 @@ from collections import defaultdict
 from datetime import datetime
 import json
 from pathlib import Path
+import re
+from statistics import median
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def parse_timestamp(value):
+    """Parse k6 RFC3339 timestamps with 1-9 fraction digits on Python 3.10."""
+    value = value.replace('Z', '+00:00')
+    match = re.fullmatch(r'(.+?)(?:\.(\d+))?([+-]\d{2}:\d{2})', value)
+    if not match:
+        raise ValueError(f'Invalid RFC3339 timestamp: {value!r}')
+    fraction = (match.group(2) or '').ljust(6, '0')[:6]
+    value = f'{match.group(1)}.{fraction}{match.group(3)}'
+    return datetime.fromisoformat(value).timestamp()
 
 
 def percentile(values, p):
@@ -16,6 +29,116 @@ def percentile(values, p):
     position = (len(values) - 1) * p
     low = int(position)
     return values[low] + (values[min(low + 1, len(values) - 1)] - values[low]) * (position - low)
+
+
+def docker_bytes(value):
+    match = re.match(r'\s*([0-9.]+)\s*([KMGT]?i?B)', value or '')
+    if not match:
+        return None
+    units = {'B': 1, 'kB': 1000, 'KB': 1000, 'KiB': 1024,
+             'MB': 1000 ** 2, 'MiB': 1024 ** 2,
+             'GB': 1000 ** 3, 'GiB': 1024 ** 3,
+             'TB': 1000 ** 4, 'TiB': 1024 ** 4}
+    return float(match.group(1)) * units[match.group(2)]
+
+
+def container_role(name):
+    for role in ['keycloak', 'db', 'k6']:
+        if f'-{role}-' in name:
+            return role
+    return None
+
+
+def prom_value(text, name, label=None):
+    values = []
+    for line in text.splitlines():
+        if line.startswith('#') or not (line.startswith(name + ' ') or line.startswith(name + '{')):
+            continue
+        if label and label not in line.split(' ', 1)[0]:
+            continue
+        try:
+            values.append(float(line.rsplit(' ', 1)[1]))
+        except (ValueError, IndexError):
+            continue
+    return sum(values) if values else None
+
+
+def resource_summary(folder, origin, seconds):
+    host = folder / 'host.jsonl'
+    if not host.exists() or origin is None:
+        return None
+    records = [json.loads(line) for line in host.read_text().splitlines() if line.strip()]
+    intervals = [records[i]['unix_s'] - records[i - 1]['unix_s'] for i in range(1, len(records))]
+    measured = [r for r in records if origin <= r.get('unix_s', 0) <= origin + seconds]
+    containers = defaultdict(lambda: {'cpu_pct': [], 'memory_pct': [], 'memory_bytes': []})
+    for record in measured:
+        for item in record.get('containers', []):
+            role = container_role(item.get('Name', ''))
+            if not role:
+                continue
+            try:
+                containers[role]['cpu_pct'].append(float(item['CPUPerc'].rstrip('%')))
+                containers[role]['memory_pct'].append(float(item['MemPerc'].rstrip('%')))
+            except (KeyError, ValueError):
+                pass
+            value = docker_bytes((item.get('MemUsage') or '').split('/', 1)[0])
+            if value is not None:
+                containers[role]['memory_bytes'].append(value)
+    container_result = {}
+    for role, values in sorted(containers.items()):
+        container_result[role] = {}
+        for field, samples in values.items():
+            if samples:
+                container_result[role][field + '_median'] = median(samples)
+                container_result[role][field + '_peak'] = max(samples)
+
+    db_rows = [r['db'] for r in measured if isinstance(r.get('db'), dict)]
+    database = None
+    if db_rows:
+        database = {f'{name}_peak': max(r.get(name, 0) for r in db_rows)
+                    for name in ['connections', 'active', 'waiting']}
+        for name in ['commits', 'rollbacks', 'blocks_read', 'blocks_hit', 'temp_bytes', 'deadlocks']:
+            database[f'{name}_delta'] = db_rows[-1].get(name, 0) - db_rows[0].get(name, 0)
+
+    snapshots = []
+    for record in measured:
+        metrics = folder / f'metrics-{int(record.get("elapsed_s", -1)):06}.prom'
+        if not metrics.exists():
+            continue
+        text = metrics.read_text()
+        snapshots.append({
+            'agroal_active': prom_value(text, 'agroal_active_count'),
+            'agroal_awaiting': prom_value(text, 'agroal_awaiting_count'),
+            'agroal_available': prom_value(text, 'agroal_available_count'),
+            'heap_used_bytes': prom_value(text, 'jvm_memory_used_bytes', 'area="heap"'),
+            'gc_pause_seconds': prom_value(text, 'jvm_gc_pause_seconds_sum'),
+            'gc_pause_count': prom_value(text, 'jvm_gc_pause_seconds_count'),
+            'http_requests': prom_value(text, 'http_server_requests_seconds_count'),
+            'password_validations': prom_value(text, 'keycloak_credentials_password_hashing_validations_total'),
+        })
+    metrics_result = {'sample_count': len(snapshots)}
+    for name in ['agroal_active', 'agroal_awaiting', 'agroal_available', 'heap_used_bytes']:
+        values = [s[name] for s in snapshots if s[name] is not None]
+        if values:
+            metrics_result[name + '_peak'] = max(values)
+    for name in ['gc_pause_seconds', 'gc_pause_count', 'http_requests', 'password_validations']:
+        values = [s[name] for s in snapshots if s[name] is not None]
+        if values:
+            metrics_result[name + '_delta'] = max(0, values[-1] - values[0])
+
+    return {
+        'observation': {
+            'sample_count_all': len(records), 'sample_count_measure': len(measured),
+            'errors_all': sum(bool(r.get('observation_error')) for r in records),
+            'errors_measure': sum(bool(r.get('observation_error')) for r in measured),
+            'interval_s_min': min(intervals) if intervals else None,
+            'interval_s_median': median(intervals) if intervals else None,
+            'interval_s_max': max(intervals) if intervals else None,
+        },
+        'containers': container_result,
+        'database': database,
+        'keycloak_metrics': metrics_result,
+    }
 
 
 def aggregate(folder):
@@ -40,7 +163,7 @@ def aggregate(folder):
                 continue
             target = flows[tags['flow']]
             if data.get('time') and name in ['lab_attempts', 'lab_completed', 'lab_latency_ms']:
-                timed.append((datetime.fromisoformat(data['time'].replace('Z', '+00:00')).timestamp(), tags['flow'], name, v))
+                timed.append((parse_timestamp(data['time']), tags['flow'], name, v))
             if name == 'lab_attempts':
                 target['attempts'] += v
             elif name == 'lab_completed':
@@ -67,6 +190,7 @@ def aggregate(folder):
         }
     result['complete_samples'] = bool(flows) and all(v['attempts'] == v['latency_samples'] for v in result['flows'].values())
     # Timestamps stay private. Public time axis is seconds since first measured sample.
+    origin = None
     if timed:
         origin = min(t[0] for t in timed)
         bins = defaultdict(lambda: {'attempts': 0, 'completed': 0, 'latency': []})
@@ -81,6 +205,9 @@ def aggregate(folder):
                               for (sec, flow), b in sorted(bins.items())]
         # Completion timestamp buckets differ from start buckets under backlog.
         result['timeline_note'] = '5s buckets; attempts at start, latency/success at completion; last bucket may be partial.'
+    resources = resource_summary(folder, origin, manifest['seconds'])
+    if resources:
+        result['resources'] = resources
     return result
 
 
