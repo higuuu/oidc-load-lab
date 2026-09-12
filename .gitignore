@@ -1,0 +1,15 @@
+.env
+.env.*
+!.env.example
+.runtime/
+results/
+dist/
+__pycache__/
+*.pyc
+.DS_Store
+*.pem
+*.key
+*.p12
+*.jks
+*.log
+node_modules/
