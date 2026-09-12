@@ -117,6 +117,8 @@ def figures(data):
     fig.savefig(out/'exploration-discrepancy.svg', metadata={'Date': None})
     fig.savefig(preview/'exploration-discrepancy.png', dpi=180)
     plt.close(fig)
+    for path in out.glob('*.svg'):
+        path.write_text('\n'.join(line.rstrip() for line in path.read_text().splitlines()) + '\n')
 
 
 def main():
