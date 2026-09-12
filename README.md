@@ -81,6 +81,7 @@ python3 scripts/public_bundle.py --export
 
 ## 文書
 
+- [Mac mini側の担当者・エージェントへの実験指示書](docs/mac-mini-handoff.md)
 - [実験設計・非機能要件・土日の進め方](docs/experiment.md)
 - [構成図・認証シーケンス・概念ER図](docs/architecture.md)
 - [Qiitaで伝える内容と公開手順](docs/publication.md)

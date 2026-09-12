@@ -12,6 +12,7 @@ FILES = [
     'scripts/lab.py', 'scripts/report.py', 'scripts/public_bundle.py',
     'tests/config.test.mjs', 'tests/protocol.test.mjs', 'tests/test_report.py',
     'docs/experiment.md', 'docs/architecture.md', 'docs/publication.md', 'docs/validation.md',
+    'docs/mac-mini-handoff.md',
 ]
 PATTERNS = {
     'private-key': re.compile(r'-----BEGIN [A-Z ]*PRIVATE KEY-----'),
