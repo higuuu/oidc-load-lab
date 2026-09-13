@@ -542,7 +542,8 @@ def e1():
             ("wrong_audience", wrong_aud, "/albums/1", "GET", None, 401, False),
             ("wrong_issuer", wrong_issuer, "/albums/1", "GET", None, 401, False),
         ]:
-            status, response_body, _ = api(path, user_token, method=method, body=body, mode=mode)
+            idem = str(uuid.uuid4()) if name == "bob_share_change_denied" else None
+            status, response_body, _ = api(path, user_token, method=method, body=body, mode=mode, idem=idem)
             record_case(cases, mode, name, status, expected, response_body, expects_data=data)
     # A stopped dependency must not become an allow decision in mode B.
     command(COMPOSE + ["stop", "openfga"])
@@ -1530,9 +1531,11 @@ def token_at(user_index, keycloak_port, values, client_id="load-client"):
         return json.loads(response.read())["access_token"]
 
 
-def api_at(api_port, path, access_token=None, *, method="GET", body=None, mode=None):
+def api_at(api_port, path, access_token=None, *, method="GET", body=None, mode=None, idem=None):
     query = "" if mode is None else "?" + urllib.parse.urlencode({"mode": mode})
     headers = {"Authorization": f"Bearer {access_token}"} if access_token else {}
+    if idem:
+        headers["Idempotency-Key"] = idem
     return request(f"https://127.0.0.1:{api_port}{path}{query}", method=method, body=body, headers=headers)
 
 
@@ -1596,7 +1599,10 @@ def e1_at(keycloak_port, api_port, openfga_port, compose_command, values):
             ("wrong_audience", wrong_aud, "/albums/1", "GET", None, 401, False),
             ("wrong_issuer", wrong_issuer, "/albums/1", "GET", None, 401, False),
         ]:
-            status, response_body, _ = api_at(api_port, path, user_token, method=method, body=body, mode=mode)
+            idem = str(uuid.uuid4()) if name == "bob_share_change_denied" else None
+            status, response_body, _ = api_at(
+                api_port, path, user_token, method=method, body=body, mode=mode, idem=idem
+            )
             record_case(cases, mode, name, status, expected, response_body, expects_data=data)
     command(compose_command + ["stop", "-t", "1", "openfga"])
     status, response_body, _ = api_at(api_port, "/albums/1", alice, mode="fga")

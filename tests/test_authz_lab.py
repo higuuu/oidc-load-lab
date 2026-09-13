@@ -25,6 +25,31 @@ class AuthzLabTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             authz_lab.parse_sample_time("not-a-timestamp")
 
+    def test_restore_api_helper_forwards_idempotency_key(self):
+        captured = {}
+        original_request = authz_lab.request
+        try:
+            def fake_request(url, **kwargs):
+                captured.update({"url": url, **kwargs})
+                return 403, {"error": "forbidden"}, {}
+
+            authz_lab.request = fake_request
+            authz_lab.api_at(
+                19444,
+                "/albums/1/shares",
+                "token",
+                method="POST",
+                body={"user_id": 100},
+                mode="fga",
+                idem="00000000-0000-4000-8000-000000000001",
+            )
+        finally:
+            authz_lab.request = original_request
+        self.assertEqual(
+            captured["headers"]["Idempotency-Key"],
+            "00000000-0000-4000-8000-000000000001",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
