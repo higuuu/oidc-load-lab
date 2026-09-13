@@ -834,7 +834,7 @@ def parse_size(value):
 
 def observe(stop_event, folder, started_monotonic, warmup):
     values = env_values()
-    names = [
+    fixed_names = [
         "oidc-authz-lab-db-1",
         "oidc-authz-lab-keycloak-1",
         "oidc-authz-lab-openfga-1",
@@ -852,6 +852,15 @@ def observe(stop_event, folder, started_monotonic, warmup):
                 "observation_error": False,
             }
             try:
+                listed = command(
+                    [
+                        "docker", "ps", "--filter", "label=com.docker.compose.project=oidc-authz-lab",
+                        "--filter", "label=com.docker.compose.service=k6", "--format", "{{.Names}}",
+                    ],
+                    capture=True,
+                    timeout=5,
+                )
+                names = fixed_names + [name for name in listed.stdout.splitlines() if name]
                 stats = command(
                     ["docker", "stats", "--no-stream", "--format", "{{.Name}}|{{.CPUPerc}}|{{.MemUsage}}", *names],
                     capture=True,
@@ -860,7 +869,10 @@ def observe(stop_event, folder, started_monotonic, warmup):
                 for line in stats.stdout.splitlines():
                     name, cpu, memory = line.split("|", 2)
                     used = memory.split("/", 1)[0].strip()
-                    record["containers"][name.removeprefix("oidc-authz-lab-").removesuffix("-1")] = {
+                    service = name.removeprefix("oidc-authz-lab-").removesuffix("-1")
+                    if service.startswith("k6-"):
+                        service = "k6"
+                    record["containers"][service] = {
                         "cpu_pct": float(cpu.rstrip("%")),
                         "memory_bytes": parse_size(used),
                     }
@@ -974,7 +986,7 @@ def resource_summary(folder, warmup, rate_rps):
         if row.get("application", {}).get("metrics", {}).get("requests", baseline_requests) - baseline_requests >= warmup_requests
     ]
     containers = {}
-    for service in ("db", "keycloak", "openfga", "api", "worker"):
+    for service in ("db", "keycloak", "openfga", "api", "worker", "k6"):
         cpu = [row["containers"][service]["cpu_pct"] for row in measured if service in row.get("containers", {})]
         memory = [row["containers"][service]["memory_bytes"] for row in measured if service in row.get("containers", {})]
         containers[service] = {
