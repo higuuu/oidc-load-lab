@@ -1634,7 +1634,7 @@ def backup_restore():
     dump_files = {}
     for database in ("auth", "app", "authz"):
         dump = command(
-            COMPOSE + ["exec", "-T", "db", "pg_dump", "-U", "postgres", "--clean", "--if-exists", "--create", "--no-owner", database],
+            COMPOSE + ["exec", "-T", "db", "pg_dump", "-U", "postgres", "--clean", "--if-exists", "--create", database],
             capture=True,
         )
         path = backup_dir / f"{database}.sql"
