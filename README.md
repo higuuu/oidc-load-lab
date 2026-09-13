@@ -87,6 +87,8 @@ python3 scripts/public_bundle.py --export
 
 ## 文書
 
+- [Mac mini：認証・認可の実装から実験完了までの指示](docs/mac-mini-authz-handoff.md)
+
 - [OSS認証・認可アーキテクチャの記事原稿](article/qiita.md) / [認証実験の詳細](article/oidc-measurement.md) / [PRレビューと検証範囲](article/pr1-review.md)
 - [Mac mini側の担当者・エージェントへの実験指示書](docs/mac-mini-handoff.md)
 - [実験設計・非機能要件・土日の進め方](docs/experiment.md)

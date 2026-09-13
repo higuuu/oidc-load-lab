@@ -7,6 +7,8 @@
 - 結果PRのレビュー：[pr1-review.md](pr1-review.md)
 - 編集の履歴：[readability-review.md](readability-review.md)
 
+次の実験はクラウドを使わずMac miniで完結させる。[実行指示と完了条件](../docs/mac-mini-authz-handoff.md)に従い、実測結果が出てから本文の合否を更新する。クラウド図は参考設計として残す。
+
 ## 読者と記事の位置づけ
 
 一般消費者向けサービスで、ログイン実装から認可・可用性・運用へ進もうとしているバックエンドエンジニアとテックリード向け。

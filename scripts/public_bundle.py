@@ -12,7 +12,7 @@ SOURCE_FILES = [
     'scripts/lab.py', 'scripts/report.py', 'scripts/analyze_results.py', 'scripts/public_bundle.py',
     'tests/config.test.mjs', 'tests/protocol.test.mjs', 'tests/test_report.py', 'tests/test_analyze_results.py',
     'docs/experiment.md', 'docs/architecture.md', 'docs/publication.md', 'docs/validation.md',
-    'docs/mac-mini-handoff.md',
+    'docs/mac-mini-handoff.md', 'docs/mac-mini-authz-handoff.md',
     'scripts/build_article.py',
 ]
 RESULT_FILES = [
