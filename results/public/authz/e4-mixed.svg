@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="500" viewBox="0 0 1080 500">
+<rect width="1080" height="500" fill="#fbfcfe"/>
+<g font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" fill="#172033">
+<text x="52" y="34" font-size="20" font-weight="700">E4 mixed OIDC and authorization load</text>
+<text x="52" y="57" font-size="12" fill="#556176">Median p99 of three trials per condition; login and refresh success were 100% in every run.</text>
+<text x="42" y="92" font-size="11" font-weight="700">condition / mode</text>
+<text x="255" y="92" font-size="11" font-weight="700">API p99 (10 ms)</text>
+<text x="525" y="92" font-size="11" font-weight="700">login p99 (150 ms)</text>
+<text x="795" y="92" font-size="11" font-weight="700">refresh p99 (20 ms)</text>
+<text x="42" y="142" font-size="11">API25 login1 refresh5 / direct</text>
+<rect x="255" y="125" width="118.3" height="24" fill="#2563eb" rx="3"/>
+<text x="379.3" y="142" font-size="10">5.77</text>
+<rect x="525" y="125" width="146.5" height="24" fill="#2563eb" rx="3"/>
+<text x="677.5" y="142" font-size="10">107.22</text>
+<rect x="795" y="125" width="143.5" height="24" fill="#2563eb" rx="3"/>
+<text x="944.5" y="142" font-size="10">14.00</text>
+<text x="42" y="217" font-size="11">API25 login1 refresh5 / fga</text>
+<rect x="255" y="200" width="164.5" height="24" fill="#dc2626" rx="3"/>
+<text x="425.5" y="217" font-size="10">8.03</text>
+<rect x="525" y="200" width="133.2" height="24" fill="#dc2626" rx="3"/>
+<text x="664.2" y="217" font-size="10">97.44</text>
+<rect x="795" y="200" width="123.0" height="24" fill="#dc2626" rx="3"/>
+<text x="924.0" y="217" font-size="10">12.00</text>
+<text x="42" y="292" font-size="11">API25 login5 refresh20 / direct</text>
+<rect x="255" y="275" width="49.4" height="24" fill="#2563eb" rx="3"/>
+<text x="310.4" y="292" font-size="10">2.41</text>
+<rect x="525" y="275" width="112.1" height="24" fill="#2563eb" rx="3"/>
+<text x="643.1" y="292" font-size="10">82.00</text>
+<rect x="795" y="275" width="61.5" height="24" fill="#2563eb" rx="3"/>
+<text x="862.5" y="292" font-size="10">6.00</text>
+<text x="42" y="367" font-size="11">API25 login5 refresh20 / fga</text>
+<rect x="255" y="350" width="77.2" height="24" fill="#dc2626" rx="3"/>
+<text x="338.2" y="367" font-size="10">3.76</text>
+<rect x="525" y="350" width="117.5" height="24" fill="#dc2626" rx="3"/>
+<text x="648.5" y="367" font-size="10">86.00</text>
+<rect x="795" y="350" width="51.2" height="24" fill="#dc2626" rx="3"/>
+<text x="852.2" y="367" font-size="10">5.00</text>
+<text x="42" y="447" font-size="11" fill="#667085">All flows passed their thresholds; authorization accuracy 100%; over-permit and dropped iterations 0.</text>
+</g></svg>

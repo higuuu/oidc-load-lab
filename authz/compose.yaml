@@ -1,0 +1,165 @@
+name: ${AUTHZ_PROJECT_NAME:-oidc-authz-lab}
+
+services:
+  db:
+    image: postgres:17.6
+    cpus: 1.0
+    mem_limit: 2g
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      AUTH_DB_PASSWORD: ${AUTH_DB_PASSWORD}
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD}
+      AUTHZ_DB_PASSWORD: ${AUTHZ_DB_PASSWORD}
+    volumes:
+      - authz-db-data:/var/lib/postgresql/data
+      - ./db/init.sh:/docker-entrypoint-initdb.d/10-authz-databases.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      interval: 2s
+      timeout: 2s
+      retries: 60
+
+  keycloak:
+    image: oidc-load-lab-keycloak:26.7.3
+    cpus: 1.5
+    mem_limit: 3g
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://db:5432/auth?sslmode=disable
+      KC_DB_USERNAME: auth_user
+      KC_DB_PASSWORD: ${AUTH_DB_PASSWORD}
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KC_ADMIN_USER}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KC_ADMIN_PASSWORD}
+      KC_HEALTH_ENABLED: "true"
+      KC_METRICS_ENABLED: "true"
+    command:
+      - start
+      - --import-realm
+      - --hostname=https://keycloak:8443
+      - --hostname-strict=false
+      - --http-enabled=false
+      - --https-certificate-file=/certs/keycloak.crt
+      - --https-certificate-key-file=/certs/keycloak.key
+    volumes:
+      - ../.authz-runtime/certs:/certs:ro
+      - ../.authz-runtime/import:/opt/keycloak/data/import:ro
+    ports:
+      - 127.0.0.1:${KC_HOST_PORT:-18443}:8443
+
+  openfga-migrate:
+    image: openfga/openfga:v1.18.1
+    cpus: 0.5
+    mem_limit: 1g
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      OPENFGA_DATASTORE_ENGINE: postgres
+      OPENFGA_DATASTORE_URI: postgres://db:5432/authz?sslmode=disable
+      OPENFGA_DATASTORE_USERNAME: authz_user
+      OPENFGA_DATASTORE_PASSWORD: ${AUTHZ_DB_PASSWORD}
+    command: ["migrate"]
+
+  openfga:
+    image: openfga/openfga:v1.18.1
+    cpus: 0.5
+    mem_limit: 1g
+    depends_on:
+      openfga-migrate:
+        condition: service_completed_successfully
+    environment:
+      OPENFGA_DATASTORE_ENGINE: postgres
+      OPENFGA_DATASTORE_URI: postgres://db:5432/authz?sslmode=disable
+      OPENFGA_DATASTORE_USERNAME: authz_user
+      OPENFGA_DATASTORE_PASSWORD: ${AUTHZ_DB_PASSWORD}
+      OPENFGA_AUTHN_METHOD: preshared
+      OPENFGA_AUTHN_PRESHARED_KEYS: ${OPENFGA_PRESHARED_KEY}
+      OPENFGA_HTTP_TLS_ENABLED: "true"
+      OPENFGA_HTTP_TLS_CERT: /certs/openfga.crt
+      OPENFGA_HTTP_TLS_KEY: /certs/openfga.key
+      OPENFGA_CHECK_QUERY_CACHE_ENABLED: "false"
+      OPENFGA_CHECK_ITERATOR_CACHE_ENABLED: "false"
+      OPENFGA_LIST_OBJECTS_ITERATOR_CACHE_ENABLED: "false"
+      OPENFGA_DATASTORE_MAX_OPEN_CONNS: "20"
+      OPENFGA_DATASTORE_MAX_IDLE_CONNS: "10"
+      OPENFGA_LOG_LEVEL: error
+    command: ["run"]
+    volumes:
+      - ../.authz-runtime/certs:/certs:ro
+    ports:
+      - 127.0.0.1:${OPENFGA_HOST_PORT:-18445}:8080
+
+  api:
+    build:
+      context: ./app
+      dockerfile: Containerfile
+    image: oidc-authz-lab-api:1
+    cpus: 0.4
+    mem_limit: 768m
+    depends_on:
+      db:
+        condition: service_healthy
+      keycloak:
+        condition: service_started
+      openfga:
+        condition: service_started
+    environment:
+      APP_DB_HOST: db
+      APP_DB_NAME: app
+      APP_DB_USER: app_user
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD}
+      OIDC_ISSUER: https://keycloak:8443/realms/authz-lab
+      OIDC_AUDIENCE: album-api
+      OIDC_JWKS_URL: https://keycloak:8443/realms/authz-lab/protocol/openid-connect/certs
+      OPENFGA_URL: https://openfga:8080
+      OPENFGA_STORE_ID: ${OPENFGA_STORE_ID}
+      OPENFGA_MODEL_ID: ${OPENFGA_MODEL_ID}
+      OPENFGA_PRESHARED_KEY: ${OPENFGA_PRESHARED_KEY}
+      CA_FILE: /certs/ca.crt
+      OBSERVER_TOKEN: ${OBSERVER_TOKEN}
+    volumes:
+      - ../.authz-runtime/certs:/certs:ro
+    ports:
+      - 127.0.0.1:${API_HOST_PORT:-18444}:8443
+
+  worker:
+    image: oidc-authz-lab-api:1
+    cpus: 0.1
+    mem_limit: 256m
+    depends_on:
+      api:
+        condition: service_started
+    command: ["python", "worker.py"]
+    environment:
+      APP_DB_HOST: db
+      APP_DB_NAME: app
+      APP_DB_USER: app_user
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD}
+      OPENFGA_URL: https://openfga:8080
+      OPENFGA_STORE_ID: ${OPENFGA_STORE_ID}
+      OPENFGA_MODEL_ID: ${OPENFGA_MODEL_ID}
+      OPENFGA_PRESHARED_KEY: ${OPENFGA_PRESHARED_KEY}
+      CA_FILE: /certs/ca.crt
+    volumes:
+      - ../.authz-runtime/certs:/certs:ro
+
+  k6:
+    image: grafana/k6:1.8.1
+    cpus: 0.5
+    mem_limit: 1g
+    profiles: ["load"]
+    environment:
+      API_URL: https://api:8443
+      KEYCLOAK_URL: https://keycloak:8443
+      SSL_CERT_FILE: /certs/ca.crt
+      LAB_PASSWORD: ${LAB_PASSWORD}
+    volumes:
+      - ../.authz-runtime/certs:/certs:ro
+      - ./load:/scripts:ro
+
+volumes:
+  authz-db-data:

@@ -2,9 +2,11 @@
 
 **ログイン数だけで認証基盤をサイジングしてよいのか？**
 
-Keycloakのログイン・Refresh Token更新・混在を、Mac mini / メモリ24GB / 土日で比較するための公開用実験キットです。認証処理とトークン更新の負荷を扱います。ドメイン権限判定の性能評価は含みません。
+Keycloakのログイン・Refresh Token更新・混在に加え、直接DB認可とOpenFGA認可をMac mini / メモリ24GBで比較する公開用実験キットです。共有解除、混合負荷、依存障害、backup/restore、継続運転を含みます。
 
 2026-09-12にMac mini 24GBで実Keycloakへのsmokeと比較実験を実施しました。対象機で確認した範囲は [validation.md](docs/validation.md)、全試行・集計・限界は [最終報告](results/final-report.md) を参照してください。これは単一Mac上の比較であり、本番容量や他環境の性能を保証しません。
+
+2026-09-13〜14には同じMac miniで認証・認可の必須E0〜E7を実施しました。認可側の全試行・合否・制約は [認証・認可最終報告](results/authz-final-report.md) と [全run台帳](results/authz-experiment-ledger.md) を参照してください。
 
 ## 最初に用意するもの
 
@@ -68,6 +70,24 @@ python3 scripts/analyze_results.py
 | `mixed-burst` | 一定 | 周期的な増減 | 更新の集中が新規ログインに与える影響 |
 
 更新の変動は60秒周期で平均R、ピーク2R、底0になる三角形です。同じR・測定時間なら一定負荷と予定更新件数を揃えられます。**実クライアントの期限切れによる自動更新・同時発火・ジッター制御を再現するモデルではなく、更新リクエストの到着形状を比較する実験です。** 発生原因まで検証したとは書きません。
+
+## 認可実験
+
+認可実験は必ず専用構成のsmokeとE1から始めます。`start --reset`はこの認可実験専用volumeだけを初期化するため、実データを入れないでください。
+
+```sh
+python3 scripts/authz_lab.py init
+python3 scripts/authz_lab.py start --reset
+python3 scripts/authz_lab.py seed --shares 5
+python3 scripts/authz_lab.py e1
+python3 scripts/authz_lab.py e2
+```
+
+E3〜E7の条件と実行順は [認証・認可実験の指示書](docs/mac-mini-authz-handoff.md) に固定しています。rawから公開可能な集約JSON・図・全run台帳を再生成するには次を実行します。
+
+```sh
+python3 scripts/analyze_authz_results.py
+```
 
 ログイン1回は認可リクエスト、パスワード送信、コード交換の3 HTTPリクエストです。`flows/s` とHTTP `requests/s` は異なります。ブラウザの描画・人の入力・TLS・外部IdP・MFAは計測外です。
 

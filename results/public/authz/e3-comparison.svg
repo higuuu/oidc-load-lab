@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="610" viewBox="0 0 1080 610">
+<rect width="1080" height="610" fill="#fbfcfe"/>
+<g font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" fill="#172033">
+<text x="52" y="34" font-size="20" font-weight="700">E3 authorization comparison</text>
+<text x="52" y="57" font-size="12" fill="#556176">Median of three formal trials; success is authorization decision accuracy; CPU 100% = one core.</text>
+<text x="48" y="92" font-size="11" font-weight="700">condition / mode</text>
+<text x="250" y="92" font-size="11" font-weight="700">API p99 (0–10 ms)</text>
+<text x="610" y="92" font-size="11" font-weight="700">accuracy</text>
+<text x="705" y="92" font-size="11" font-weight="700">API CPU median (0–30%)</text>
+<text x="1002" y="92" text-anchor="end" font-size="11" font-weight="700">FGA CPU</text>
+<text x="48" y="139" font-size="11">25 rps / shares 5 / direct</text>
+<rect x="250" y="122" width="186.1" height="24" fill="#2563eb" rx="3"/>
+<text x="444.1" y="139" font-size="10">5.640 ms</text>
+<text x="610" y="139" font-size="11">100.000%</text>
+<rect x="705" y="122" width="138.3" height="24" fill="#0f766e" rx="3"/>
+<text x="851.3" y="139" font-size="10">17.29%</text>
+<text x="1002" y="139" text-anchor="end" font-size="11">0.02%</text>
+<text x="48" y="207" font-size="11">25 rps / shares 5 / fga</text>
+<rect x="250" y="190" width="296.0" height="24" fill="#dc2626" rx="3"/>
+<text x="554.0" y="207" font-size="10">8.971 ms</text>
+<text x="610" y="207" font-size="11">100.000%</text>
+<rect x="705" y="190" width="139.4" height="24" fill="#0f766e" rx="3"/>
+<text x="852.4" y="207" font-size="10">17.42%</text>
+<text x="1002" y="207" text-anchor="end" font-size="11">3.55%</text>
+<text x="48" y="275" font-size="11">100 rps / shares 5 / direct</text>
+<rect x="250" y="258" width="145.9" height="24" fill="#2563eb" rx="3"/>
+<text x="403.9" y="275" font-size="10">4.421 ms</text>
+<text x="610" y="275" font-size="11">100.000%</text>
+<rect x="705" y="258" width="153.8" height="24" fill="#0f766e" rx="3"/>
+<text x="866.8" y="275" font-size="10">19.22%</text>
+<text x="1002" y="275" text-anchor="end" font-size="11">0.02%</text>
+<text x="48" y="343" font-size="11">100 rps / shares 5 / fga</text>
+<rect x="250" y="326" width="174.0" height="24" fill="#dc2626" rx="3"/>
+<text x="432.0" y="343" font-size="10">5.273 ms</text>
+<text x="610" y="343" font-size="11">100.000%</text>
+<rect x="705" y="326" width="147.4" height="24" fill="#0f766e" rx="3"/>
+<text x="860.4" y="343" font-size="10">18.42%</text>
+<text x="1002" y="343" text-anchor="end" font-size="11">6.20%</text>
+<text x="48" y="411" font-size="11">100 rps / shares 50 / direct</text>
+<rect x="250" y="394" width="148.7" height="24" fill="#2563eb" rx="3"/>
+<text x="406.7" y="411" font-size="10">4.507 ms</text>
+<text x="610" y="411" font-size="11">100.000%</text>
+<rect x="705" y="394" width="153.4" height="24" fill="#0f766e" rx="3"/>
+<text x="866.4" y="411" font-size="10">19.17%</text>
+<text x="1002" y="411" text-anchor="end" font-size="11">0.01%</text>
+<text x="48" y="479" font-size="11">100 rps / shares 50 / fga</text>
+<rect x="250" y="462" width="177.6" height="24" fill="#dc2626" rx="3"/>
+<text x="435.6" y="479" font-size="10">5.381 ms</text>
+<text x="610" y="479" font-size="11">100.000%</text>
+<rect x="705" y="462" width="149.5" height="24" fill="#0f766e" rx="3"/>
+<text x="862.5" y="479" font-size="10">18.68%</text>
+<text x="1002" y="479" text-anchor="end" font-size="11">6.46%</text>
+<text x="48" y="560" font-size="11" fill="#667085">All rows: over-permit 0, dropped iterations 0, observer errors 0. CPU values are medians of per-run medians.</text>
+</g></svg>

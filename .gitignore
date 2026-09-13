@@ -2,10 +2,13 @@
 .env.*
 !.env.example
 .runtime/
+.authz-runtime/
 results/*
 !results/environment.md
 !results/experiment-ledger.md
 !results/final-report.md
+!results/authz-experiment-ledger.md
+!results/authz-final-report.md
 !results/public/
 !results/public/**
 dist/
