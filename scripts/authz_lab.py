@@ -49,6 +49,18 @@ def command(args, *, input_text=None, capture=False, check=True, timeout=None):
     )
 
 
+def git_provenance():
+    return {
+        "git_head": command(["git", "rev-parse", "HEAD"], capture=True).stdout.strip(),
+        "git_dirty": bool(
+            command(
+                ["git", "status", "--porcelain", "--untracked-files=no"],
+                capture=True,
+            ).stdout.strip()
+        ),
+    }
+
+
 def env_values():
     values = {}
     for line in ENV_FILE.read_text().splitlines():
@@ -560,6 +572,7 @@ def e1():
         "over_permit_count": sum(1 for case in cases if case["expected_status"] != 200 and case["actual_status"] == 200),
         "limitations": [],
     }
+    output.update(git_provenance())
     folder = RAW / (time.strftime("%Y%m%dT%H%M%S") + "-e1")
     folder.mkdir(parents=True)
     (folder / "result.json").write_text(json.dumps(output, indent=2))
@@ -818,6 +831,7 @@ def e2():
         "passed": all(item["passed"] for item in modes) and worker_fault["passed"],
         "over_permit_count": sum(item["erroneous_allow_after_removal_completion"] for item in modes),
     }
+    output.update(git_provenance())
     folder = RAW / (time.strftime("%Y%m%dT%H%M%S") + "-e2")
     folder.mkdir(parents=True)
     (folder / "result.json").write_text(json.dumps(output, indent=2))
@@ -1725,6 +1739,7 @@ def backup_restore():
             "The older backup correctly restores its older permission state; newer source-of-truth changes require separate reconciliation before production reopening.",
         ],
     }
+    result.update(git_provenance())
     result["passed"] = (
         original_denied
         and old_permission_reappeared
