@@ -6,8 +6,9 @@
 - 入力ハッシュと検査結果：[evidence-check.json](evidence-check.json)
 - 結果PRのレビュー：[pr1-review.md](pr1-review.md)
 - 編集の履歴：[readability-review.md](readability-review.md)
+- 認証・認可E0〜E7の反映案：[authz-reflection.md](authz-reflection.md)
 
-次の実験はクラウドを使わずMac miniで完結させる。[実行指示と完了条件](../docs/mac-mini-authz-handoff.md)に従い、実測結果が出てから本文の合否を更新する。クラウド図は参考設計として残す。
+認証・認可E0〜E7はクラウドを使わずMac miniで実行した。[最終報告](../results/authz-final-report.md)と[全run台帳](../results/authz-experiment-ledger.md)を根拠に本文へ反映する。クラウド図は未検証の参考設計として残す。
 
 ## 読者と記事の位置づけ
 
@@ -15,7 +16,7 @@
 
 写真アルバムの共有を一貫した例に使い、Keycloak・OpenFGA・業務APIの責任分担、権限変更の整合性、ローカルとGCP/AWS/Azureへの配置、障害時の影響、試験の順序を説明する。既存の認証実験は、構成の一部を実際に測った例として活用する。
 
-「大規模認証の性能を証明した」「3クラウドで構築・検証した」とは書かない。認可モデル・クラウド配置は設計案で、実装やIaCは提供していない。読者が構成を選び、実装・試験の順序を決められることを記事の価値とする。
+「大規模認証の性能を証明した」「3クラウドで構築・検証した」とは書かない。単一Mac向けの最小認可モデルは実装・実測済みだが、クラウド配置は設計案でIaCは提供していない。読者が構成を選び、実装・試験の順序を決められることを記事の価値とする。
 
 タグ案：`Keycloak`、`OpenFGA`、`認証`、`認可`、`アーキテクチャ`。
 

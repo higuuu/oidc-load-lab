@@ -14,6 +14,11 @@ SOURCE_FILES = [
     'docs/experiment.md', 'docs/architecture.md', 'docs/publication.md', 'docs/validation.md',
     'docs/mac-mini-handoff.md', 'docs/mac-mini-authz-handoff.md',
     'scripts/build_article.py',
+    'authz/compose.yaml', 'authz/app/Containerfile', 'authz/app/main.py',
+    'authz/app/requirements.txt', 'authz/app/worker.py', 'authz/db/init.sh',
+    'authz/load/authz.js', 'authz/load/mixed.js',
+    'scripts/authz_lab.py', 'scripts/analyze_authz_results.py',
+    'tests/test_authz_lab.py', 'tests/test_analyze_authz_results.py',
 ]
 RESULT_FILES = [
     'results/environment.md', 'results/experiment-ledger.md', 'results/final-report.md',
@@ -24,6 +29,11 @@ RESULT_FILES = [
     'article/generated-results.md', 'article/evidence-check.json', 'article/readability-review.md',
     'article/figures/reader-comparison.svg', 'article/figures/reader-discrepancy.svg',
     'article/figures/latency-and-cpu.svg', 'article/figures/exploration-discrepancy.svg',
+    'results/authz-final-report.md', 'results/authz-experiment-ledger.md',
+    'results/public/authz/run-set.json', 'results/public/authz/summary.json',
+    'results/public/authz/e3-comparison.svg', 'results/public/authz/e4-mixed.svg',
+    'results/public/authz/e5-recovery.svg', 'results/public/authz/e7-stability.svg',
+    'article/authz-reflection.md',
 ]
 FILES = SOURCE_FILES + RESULT_FILES
 PATTERNS = {
