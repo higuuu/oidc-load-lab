@@ -1,4 +1,4 @@
-name: oidc-authz-lab
+name: ${AUTHZ_PROJECT_NAME:-oidc-authz-lab}
 
 services:
   db:
@@ -48,7 +48,7 @@ services:
       - ../.authz-runtime/certs:/certs:ro
       - ../.authz-runtime/import:/opt/keycloak/data/import:ro
     ports:
-      - 127.0.0.1:18443:8443
+      - 127.0.0.1:${KC_HOST_PORT:-18443}:8443
 
   openfga-migrate:
     image: openfga/openfga:v1.18.1
@@ -91,7 +91,7 @@ services:
     volumes:
       - ../.authz-runtime/certs:/certs:ro
     ports:
-      - 127.0.0.1:18445:8080
+      - 127.0.0.1:${OPENFGA_HOST_PORT:-18445}:8080
 
   api:
     build:
@@ -124,7 +124,7 @@ services:
     volumes:
       - ../.authz-runtime/certs:/certs:ro
     ports:
-      - 127.0.0.1:18444:8443
+      - 127.0.0.1:${API_HOST_PORT:-18444}:8443
 
   worker:
     image: oidc-authz-lab-api:1

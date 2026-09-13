@@ -7,10 +7,13 @@ fixed status text and aggregate results suitable for review.
 
 import argparse
 import base64
+import datetime
+import hashlib
 import json
 import os
 import pathlib
 import secrets
+import shutil
 import ssl
 import statistics
 import subprocess
@@ -48,6 +51,15 @@ def command(args, *, input_text=None, capture=False, check=True, timeout=None):
 def env_values():
     values = {}
     for line in ENV_FILE.read_text().splitlines():
+        if line and not line.startswith("#"):
+            key, value = line.split("=", 1)
+            values[key] = value
+    return values
+
+
+def read_env_file(path):
+    values = {}
+    for line in pathlib.Path(path).read_text().splitlines():
         if line and not line.startswith("#"):
             key, value = line.split("=", 1)
             values[key] = value
@@ -927,7 +939,7 @@ def aggregate_load(folder, manifest, resources):
             "openfga": trend("authz_fga_ms{phase:measure}"),
         },
         "resources": resources,
-        "k6_thresholds_passed": summary.get("state", {}).get("isStdOutTTY") is not None,
+        "k6_thresholds_passed": manifest["exit_code"] == 0,
         "exit_code": manifest["exit_code"],
     }
     p99 = result["latency_ms"]["whole"].get("p(99)")
@@ -953,7 +965,9 @@ def resource_summary(folder, warmup, rate_rps):
         if row.get("application", {}).get("metrics", {}).get("requests") is not None
     ]
     baseline_requests = min(request_counts) if request_counts else 0
-    warmup_requests = warmup * rate_rps
+    # With timeline profiles warmup is zero; require at least one observed API
+    # request so setup/token-generation resource use is not misclassified.
+    warmup_requests = max(1, warmup * rate_rps)
     measured = [
         row
         for row in rows
@@ -1064,10 +1078,652 @@ def run_load(name, mode, rate_rps, shares, duration_s=180, warmup_s=60, vus=200,
     return result
 
 
+def aggregate_mixed(folder, manifest, resources):
+    result = aggregate_load(folder, manifest, resources)
+    summary = json.loads((folder / "summary.json").read_text())
+    flows = {}
+    for flow, limit_ms in (("login", 2000), ("refresh", 500)):
+        attempts = metric_values(summary, f"oidc_attempts{{flow:{flow},phase:measure}}")
+        completed = metric_values(summary, f"oidc_completed{{flow:{flow},phase:measure}}")
+        errors = metric_values(summary, f"oidc_errors{{flow:{flow},phase:measure}}")
+        success = metric_values(summary, f"oidc_success{{flow:{flow},phase:measure}}")
+        latency = metric_values(summary, f"oidc_latency_ms{{flow:{flow},phase:measure}}")
+        flows[flow] = {
+            "attempted": int(attempts.get("count", 0)),
+            "completed": int(completed.get("count", 0)),
+            "errors": int(errors.get("count", 0)),
+            "success_rate": success.get("rate"),
+            "latency_ms": {key: latency.get(key) for key in ("med", "p(50)", "p(95)", "p(99)", "max", "avg", "count")},
+            "acceptance": {"success_rate_min": 0.99, "p99_ms_max": limit_ms},
+        }
+        flows[flow]["passed"] = (
+            flows[flow]["attempted"] > 0
+            and flows[flow]["success_rate"] is not None
+            and flows[flow]["success_rate"] >= 0.99
+            and flows[flow]["latency_ms"]["p(99)"] is not None
+            and flows[flow]["latency_ms"]["p(99)"] < limit_ms
+        )
+    result["login_rate_rps"] = manifest["login_rate_rps"]
+    result["refresh_rate_rps"] = manifest["refresh_rate_rps"]
+    result["oidc"] = flows
+    result["passed"] = result["passed"] and all(item["passed"] for item in flows.values())
+    return result
+
+
+def run_mixed(name, mode, api_rate_rps, login_rate_rps, refresh_rate_rps, shares=5, duration_s=180, warmup_s=60, experiment="E4"):
+    folder = RAW / (
+        time.strftime("%Y%m%dT%H%M%S")
+        + f"-{name}-{mode}-api{api_rate_rps}-login{login_rate_rps}-refresh{refresh_rate_rps}-s{shares}"
+    )
+    folder.mkdir(parents=True)
+    head = command(["git", "rev-parse", "HEAD"], capture=True).stdout.strip()
+    dirty = bool(command(["git", "status", "--porcelain", "--untracked-files=no"], capture=True).stdout.strip())
+    manifest = {
+        "run_id": folder.name,
+        "experiment": experiment,
+        "mode": mode,
+        "rate_rps": api_rate_rps,
+        "api_rate_rps": api_rate_rps,
+        "login_rate_rps": login_rate_rps,
+        "refresh_rate_rps": refresh_rate_rps,
+        "shares_per_album": shares,
+        "duration_s": duration_s,
+        "warmup_s": warmup_s,
+        "users": 1000,
+        "albums": 1000,
+        "allowed_mix_pct": 80,
+        "denied_mix_pct": 20,
+        "target_seed": "deterministic-iteration-v1",
+        "oidc_login_flow": "authorization_code_pkce_s256",
+        "oidc_refresh_rotation": "use_latest_or_fail_session",
+        "git_head": head,
+        "git_dirty": dirty,
+        "docker_vm": json.loads(command(["docker", "info", "--format", "{\"architecture\":\"{{.Architecture}}\",\"cpus\":{{.NCPU}},\"memory_bytes\":{{.MemTotal}}}"], capture=True).stdout),
+        "images": image_manifest(),
+        "resource_limits": {"keycloak": "1.5CPU/3GiB", "postgres": "1CPU/2GiB", "api": "0.4CPU/768MiB", "worker": "0.1CPU/256MiB", "openfga": "0.5CPU/1GiB", "k6": "0.5CPU/1GiB"},
+        "tls": {"client_to_keycloak": "verified_local_ca", "client_to_api": "verified_local_ca", "api_worker_to_openfga": "verified_local_ca", "database": "disabled_inside_dedicated_network"},
+        "openfga_check_consistency": "HIGHER_CONSISTENCY",
+        "openfga_check_cache": "disabled",
+        "start_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "measurement_status": "started",
+    }
+    (folder / "manifest.json").write_text(json.dumps(manifest, indent=2))
+    stop_event = threading.Event()
+    observer = threading.Thread(target=observe, args=(stop_event, folder, time.monotonic(), warmup_s), daemon=True)
+    observer.start()
+    run_command = COMPOSE + [
+        "run", "--rm", "--no-deps", "--user", "0:0", "-v", f"{folder}:/results",
+        "-e", f"MODE={mode}", "-e", f"API_RATE={api_rate_rps}", "-e", f"LOGIN_RATE={login_rate_rps}",
+        "-e", f"REFRESH_RATE={refresh_rate_rps}", "-e", f"SHARES={shares}", "-e", f"DURATION={duration_s}",
+        "-e", f"WARMUP={warmup_s}", "k6", "run", "/scripts/mixed.js",
+    ]
+    with (folder / "console.log").open("w") as console:
+        process = subprocess.run(run_command, cwd=ROOT, stdout=console, stderr=subprocess.STDOUT)
+    stop_event.set()
+    observer.join(timeout=15)
+    manifest["exit_code"] = process.returncode
+    manifest["end_utc"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    manifest["measurement_status"] = "completed" if (folder / "summary.json").exists() else "failed_without_summary"
+    (folder / "manifest.json").write_text(json.dumps(manifest, indent=2))
+    if not (folder / "summary.json").exists():
+        result = {"run_id": folder.name, "passed": False, "exit_code": process.returncode, "error": "missing_summary"}
+    else:
+        resources = resource_summary(folder, warmup_s, api_rate_rps)
+        result = aggregate_mixed(folder, manifest, resources)
+    (folder / "aggregate.json").write_text(json.dumps(result, indent=2))
+    print(json.dumps({
+        "run": folder.name,
+        "passed": result.get("passed"),
+        "exit_code": process.returncode,
+        "api_p99_ms": result.get("latency_ms", {}).get("whole", {}).get("p(99)"),
+        "accuracy": result.get("decision_accuracy"),
+        "over_permit": result.get("over_permit"),
+        "dropped": result.get("dropped_iterations_all_phases"),
+        "login": result.get("oidc", {}).get("login"),
+        "refresh": result.get("oidc", {}).get("refresh"),
+    }))
+    return result
+
+
+TIMELINE_METRICS = {
+    "authz_attempts",
+    "authz_decision_correct",
+    "authz_over_permit",
+    "authz_unexpected",
+    "authz_api_ms",
+    "oidc_attempts",
+    "oidc_success",
+    "oidc_latency_ms",
+}
+
+
+def parse_sample_time(value):
+    return datetime.datetime.fromisoformat(value.replace("Z", "+00:00")).timestamp()
+
+
+def read_timeline_points(path):
+    points = []
+    with path.open() as stream:
+        for line in stream:
+            try:
+                item = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if item.get("type") != "Point" or item.get("metric") not in TIMELINE_METRICS:
+                continue
+            data = item.get("data", {})
+            points.append(
+                {
+                    "metric": item["metric"],
+                    "time": parse_sample_time(data["time"]),
+                    "value": float(data["value"]),
+                    "tags": data.get("tags", {}),
+                }
+            )
+    starts = [point["time"] for point in points if point["metric"] in {"authz_attempts", "oidc_attempts"}]
+    if not starts:
+        return [], None
+    origin = min(starts)
+    for point in points:
+        point["elapsed_s"] = point["time"] - origin
+    return points, origin
+
+
+def interval_assessment(points, start_s, end_s, api_rate, login_rate, refresh_rate):
+    selected = [point for point in points if start_s <= point["elapsed_s"] < end_s]
+
+    def values(metric, flow=None):
+        return [
+            point["value"]
+            for point in selected
+            if point["metric"] == metric and (flow is None or point["tags"].get("flow") == flow)
+        ]
+
+    def p99(items):
+        return percentile(items, 0.99) if items else None
+
+    seconds = end_s - start_s
+    authz_attempts = sum(values("authz_attempts"))
+    correct = values("authz_decision_correct")
+    unexpected = values("authz_unexpected")
+    over_permit = sum(values("authz_over_permit"))
+    api_latency = values("authz_api_ms")
+    result = {
+        "start_s": start_s,
+        "end_s": end_s,
+        "authz": {
+            "attempted": int(authz_attempts),
+            "decision_accuracy": sum(correct) / len(correct) if correct else None,
+            "unexpected_ratio": sum(unexpected) / len(unexpected) if unexpected else None,
+            "over_permit": int(over_permit),
+            "p99_ms": p99(api_latency),
+        },
+        "oidc": {},
+    }
+    for flow, rate, limit in (("login", login_rate, 2000), ("refresh", refresh_rate, 500)):
+        attempts = sum(values("oidc_attempts", flow))
+        success = values("oidc_success", flow)
+        latency = values("oidc_latency_ms", flow)
+        result["oidc"][flow] = {
+            "attempted": int(attempts),
+            "success_rate": sum(success) / len(success) if success else None,
+            "p99_ms": p99(latency),
+            "limit_ms": limit,
+        }
+    minimum = lambda rate: max(1, int(rate * seconds * 0.8))
+    result["passed"] = (
+        result["authz"]["attempted"] >= minimum(api_rate)
+        and result["authz"]["decision_accuracy"] is not None
+        and result["authz"]["decision_accuracy"] >= 0.999
+        and result["authz"]["unexpected_ratio"] is not None
+        and result["authz"]["unexpected_ratio"] <= 0.001
+        and result["authz"]["over_permit"] == 0
+        and result["authz"]["p99_ms"] is not None
+        and result["authz"]["p99_ms"] < 300
+        and all(
+            result["oidc"][flow]["attempted"] >= minimum(rate)
+            and result["oidc"][flow]["success_rate"] is not None
+            and result["oidc"][flow]["success_rate"] >= 0.99
+            and result["oidc"][flow]["p99_ms"] is not None
+            and result["oidc"][flow]["p99_ms"] < result["oidc"][flow]["limit_ms"]
+            for flow, rate in (("login", login_rate), ("refresh", refresh_rate))
+        )
+    )
+    return result
+
+
+def timeline_assessment(points, baseline_s, middle_s, recovery_s, api_rate, middle_api_rate, login_rate, refresh_rate):
+    recovery_start = baseline_s + middle_s
+    result = {
+        "baseline": interval_assessment(points, 0, baseline_s, api_rate, login_rate, refresh_rate),
+        "middle": interval_assessment(points, baseline_s, recovery_start, middle_api_rate, login_rate, refresh_rate),
+        "recovery": interval_assessment(points, recovery_start, recovery_start + recovery_s, api_rate, login_rate, refresh_rate),
+        "windows_10s": [],
+        "stable_window_start_s": None,
+        "recovery_confirmation_s": None,
+    }
+    for start in range(0, baseline_s + middle_s + recovery_s, 10):
+        rate = middle_api_rate if baseline_s <= start < recovery_start else api_rate
+        result["windows_10s"].append(interval_assessment(points, start, start + 10, rate, login_rate, refresh_rate))
+    recovery_windows = [window for window in result["windows_10s"] if window["start_s"] >= recovery_start]
+    for index in range(len(recovery_windows) - 2):
+        group = recovery_windows[index : index + 3]
+        if all(window["passed"] for window in group):
+            result["stable_window_start_s"] = group[0]["start_s"] - recovery_start
+            result["recovery_confirmation_s"] = group[-1]["end_s"] - recovery_start
+            break
+    result["over_permit_total"] = int(sum(point["value"] for point in points if point["metric"] == "authz_over_permit"))
+    result["passed"] = (
+        result["baseline"]["passed"]
+        and result["recovery_confirmation_s"] is not None
+        and result["recovery_confirmation_s"] <= 60
+        and result["over_permit_total"] == 0
+    )
+    return result
+
+
+def wait_for_load_start(samples_path, process, timeout_s=1200):
+    deadline = time.monotonic() + timeout_s
+    while time.monotonic() < deadline:
+        if process.poll() is not None:
+            return None
+        if samples_path.exists():
+            with samples_path.open() as stream:
+                for line in stream:
+                    try:
+                        item = json.loads(line)
+                    except json.JSONDecodeError:
+                        continue
+                    if item.get("type") == "Point" and item.get("metric") == "authz_attempts":
+                        return parse_sample_time(item["data"]["time"])
+        time.sleep(1)
+    return None
+
+
+def sleep_until_epoch(target):
+    while True:
+        remaining = target - time.time()
+        if remaining <= 0:
+            return
+        time.sleep(min(1, remaining))
+
+
+def protected_consistency(mode, timeout_s=90):
+    deadline = time.monotonic() + timeout_s
+    last = None
+    while time.monotonic() < deadline:
+        try:
+            alice, bob, carol = token(0), token(1), token(101)
+            checks = []
+            for bearer, expected in ((alice, 200), (bob, 200), (carol, 403)):
+                status, body, _ = api("/albums/1", bearer, mode=mode)
+                protected_data = isinstance(body, dict) and "album" in body
+                checks.append(status == expected and (expected == 200 or not protected_data))
+            return {"passed": all(checks), "case_count": len(checks), "over_permit": 0 if all(checks) else None}
+        except Exception as error:
+            last = type(error).__name__
+            time.sleep(2)
+    return {"passed": False, "case_count": 0, "over_permit": None, "safe_error": last or "timeout"}
+
+
+def run_timeline(name, mode, profile, api_rate, login_rate, refresh_rate, baseline_s, middle_s, recovery_s, middle_api_rate=None, fault_service=None):
+    middle_api_rate = middle_api_rate if middle_api_rate is not None else api_rate
+    folder = RAW / (time.strftime("%Y%m%dT%H%M%S") + f"-{name}-{mode}-{profile}")
+    folder.mkdir(parents=True)
+    samples_path = folder / "samples.json"
+    experiment = "E4-recovery" if profile == "timeline" else "E5"
+    manifest = {
+        "run_id": folder.name,
+        "experiment": experiment,
+        "mode": mode,
+        "profile": profile,
+        "rate_rps": api_rate,
+        "api_rate_rps": api_rate,
+        "middle_api_rate_rps": middle_api_rate,
+        "login_rate_rps": login_rate,
+        "refresh_rate_rps": refresh_rate,
+        "shares_per_album": 5,
+        "duration_s": baseline_s + middle_s + recovery_s,
+        "warmup_s": 0,
+        "baseline_s": baseline_s,
+        "middle_s": middle_s,
+        "recovery_s": recovery_s,
+        "fault_service": fault_service,
+        "git_head": command(["git", "rev-parse", "HEAD"], capture=True).stdout.strip(),
+        "git_dirty": bool(command(["git", "status", "--porcelain", "--untracked-files=no"], capture=True).stdout.strip()),
+        "start_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "measurement_status": "started",
+    }
+    (folder / "manifest.json").write_text(json.dumps(manifest, indent=2))
+    stop_event = threading.Event()
+    observer = threading.Thread(target=observe, args=(stop_event, folder, time.monotonic(), 0), daemon=True)
+    observer.start()
+    run_command = COMPOSE + [
+        "run", "--rm", "--no-deps", "--user", "0:0", "-v", f"{folder}:/results",
+        "-e", f"MODE={mode}", "-e", f"PROFILE={profile}", "-e", f"API_RATE={api_rate}",
+        "-e", f"STRESS_API_RATE={middle_api_rate}", "-e", f"LOGIN_RATE={login_rate}",
+        "-e", f"REFRESH_RATE={refresh_rate}", "-e", "SHARES=5", "-e", f"BASELINE_SECONDS={baseline_s}",
+        "-e", f"STRESS_SECONDS={middle_s}", "-e", f"RECOVERY_SECONDS={recovery_s}",
+        "k6", "run", "--out", "json=/results/samples.json", "/scripts/mixed.js",
+    ]
+    injection = None
+    with (folder / "console.log").open("w") as console:
+        process = subprocess.Popen(run_command, cwd=ROOT, stdout=console, stderr=subprocess.STDOUT)
+        load_start = wait_for_load_start(samples_path, process)
+        if fault_service and load_start is not None:
+            sleep_until_epoch(load_start + baseline_s)
+            stop_started = time.time()
+            stopped = command(COMPOSE + ["stop", "-t", "1", fault_service], check=False, capture=True)
+            stop_complete = time.time()
+            time.sleep(middle_s)
+            start_started = time.time()
+            started = command(COMPOSE + ["start", fault_service], check=False, capture=True)
+            start_complete = time.time()
+            injection = {
+                "service": fault_service,
+                "load_start_utc": datetime.datetime.fromtimestamp(load_start, datetime.timezone.utc).isoformat(),
+                "stop_command_offset_s": stop_started - load_start,
+                "stop_complete_offset_s": stop_complete - load_start,
+                "stop_exit_code": stopped.returncode,
+                "restart_command_offset_s": start_started - load_start,
+                "restart_complete_offset_s": start_complete - load_start,
+                "restart_exit_code": started.returncode,
+            }
+        exit_code = process.wait()
+    stop_event.set()
+    observer.join(timeout=15)
+    manifest["exit_code"] = exit_code
+    manifest["load_start_detected"] = load_start is not None
+    manifest["fault_injection"] = injection
+    manifest["end_utc"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    manifest["measurement_status"] = "completed" if (folder / "summary.json").exists() and samples_path.exists() else "failed_without_summary"
+    (folder / "manifest.json").write_text(json.dumps(manifest, indent=2))
+    if not (folder / "summary.json").exists() or not samples_path.exists():
+        result = {"run_id": folder.name, "passed": False, "error": "missing_summary_or_samples", "exit_code": exit_code}
+    else:
+        points, origin = read_timeline_points(samples_path)
+        assessment = timeline_assessment(points, baseline_s, middle_s, recovery_s, api_rate, middle_api_rate, login_rate, refresh_rate)
+        assessment["run_id"] = folder.name
+        assessment["experiment"] = experiment
+        assessment["mode"] = mode
+        assessment["profile"] = profile
+        assessment["exit_code"] = exit_code
+        assessment["sample_origin_utc"] = datetime.datetime.fromtimestamp(origin, datetime.timezone.utc).isoformat() if origin else None
+        assessment["resources"] = resource_summary(folder, 0, api_rate)
+        summary = json.loads((folder / "summary.json").read_text())
+        assessment["dropped_iterations_all_phases"] = int(metric_values(summary, "dropped_iterations").get("count", 0))
+        if fault_service:
+            middle = assessment["middle"]
+            if fault_service in {"openfga", "api"}:
+                effect = (middle["authz"]["unexpected_ratio"] or 0) > 0.01
+            elif fault_service == "keycloak":
+                effect = any((middle["oidc"][flow]["success_rate"] or 0) < 0.99 for flow in ("login", "refresh"))
+            else:
+                effect = (middle["authz"]["unexpected_ratio"] or 0) > 0.01 and any(
+                    (middle["oidc"][flow]["success_rate"] or 0) < 0.99 for flow in ("login", "refresh")
+                )
+            assessment["fault_effect_observed"] = effect
+            assessment["post_recovery_consistency"] = protected_consistency(mode)
+            assessment["passed"] = (
+                injection is not None
+                and injection["stop_exit_code"] == 0
+                and injection["restart_exit_code"] == 0
+                and assessment["baseline"]["passed"]
+                and effect
+                and assessment["over_permit_total"] == 0
+                and assessment["recovery_confirmation_s"] is not None
+                and assessment["recovery_confirmation_s"] <= 60
+                and assessment["post_recovery_consistency"]["passed"]
+            )
+        else:
+            assessment["overload_effect_observed"] = not assessment["middle"]["passed"]
+        result = assessment
+    (folder / "aggregate.json").write_text(json.dumps(result, indent=2))
+    print(json.dumps({
+        "run": folder.name,
+        "passed": result.get("passed"),
+        "fault_effect": result.get("fault_effect_observed"),
+        "overload_effect": result.get("overload_effect_observed"),
+        "over_permit": result.get("over_permit_total"),
+        "recovery_confirmation_s": result.get("recovery_confirmation_s"),
+        "dropped": result.get("dropped_iterations_all_phases"),
+    }))
+    return result
+
+
+def token_at(user_index, keycloak_port, values, client_id="load-client"):
+    form = urllib.parse.urlencode(
+        {
+            "grant_type": "password",
+            "client_id": client_id,
+            "username": f"user-{user_index:05d}",
+            "password": values["LAB_PASSWORD"],
+        }
+    ).encode()
+    req = urllib.request.Request(
+        f"https://127.0.0.1:{keycloak_port}/realms/authz-lab/protocol/openid-connect/token",
+        data=form,
+        method="POST",
+        headers={"Content-Type": "application/x-www-form-urlencoded", "Accept": "application/json"},
+    )
+    with urllib.request.urlopen(req, context=ssl_context(), timeout=10) as response:
+        return json.loads(response.read())["access_token"]
+
+
+def api_at(api_port, path, access_token=None, *, method="GET", body=None, mode=None):
+    query = "" if mode is None else "?" + urllib.parse.urlencode({"mode": mode})
+    headers = {"Authorization": f"Bearer {access_token}"} if access_token else {}
+    return request(f"https://127.0.0.1:{api_port}{path}{query}", method=method, body=body, headers=headers)
+
+
+def wrong_issuer_token_at(keycloak_port, values):
+    _, admin = form_request(
+        f"https://127.0.0.1:{keycloak_port}/realms/master/protocol/openid-connect/token",
+        {
+            "grant_type": "password",
+            "client_id": "admin-cli",
+            "username": values["KC_ADMIN_USER"],
+            "password": values["KC_ADMIN_PASSWORD"],
+        },
+    )
+    headers = {"Authorization": f"Bearer {admin['access_token']}"}
+    realm_url = f"https://127.0.0.1:{keycloak_port}/admin/realms/authz-lab"
+    status, representation, _ = request(realm_url, headers=headers)
+    if status != 200:
+        raise RuntimeError(f"restore_admin_get_realm_http_{status}")
+    original_attributes = dict(representation.get("attributes") or {})
+    changed = dict(representation)
+    changed["attributes"] = {**original_attributes, "frontendUrl": "https://wrong-issuer.invalid"}
+    status, _, _ = request(realm_url, method="PUT", body=changed, headers=headers)
+    if status != 204:
+        raise RuntimeError(f"restore_admin_set_frontend_http_{status}")
+    try:
+        return token_at(0, keycloak_port, values)
+    finally:
+        restored = dict(representation)
+        restored["attributes"] = original_attributes
+        status, _, _ = request(realm_url, method="PUT", body=restored, headers=headers)
+        if status != 204:
+            raise RuntimeError(f"restore_admin_restore_frontend_http_{status}")
+
+
+def e1_at(keycloak_port, api_port, openfga_port, compose_command, values):
+    alice = token_at(0, keycloak_port, values)
+    bob = token_at(1, keycloak_port, values)
+    carol = token_at(100, keycloak_port, values)
+    wrong_aud = token_at(0, keycloak_port, values, "wrong-audience")
+    short = token_at(0, keycloak_port, values, "short-client")
+    wrong_issuer = wrong_issuer_token_at(keycloak_port, values)
+    time.sleep(2)
+    parts = alice.split(".")
+    tampered_signature = ("A" if parts[2][0] != "A" else "B") + parts[2][1:]
+    tampered = ".".join([parts[0], parts[1], tampered_signature])
+    cases = []
+    for mode in ("direct", "fga"):
+        for name, user_token, path, method, body, expected, data in [
+            ("alice_view", alice, "/albums/1", "GET", None, 200, True),
+            ("alice_edit", alice, "/albums/1", "PUT", {"name": "E6 restored edit", "user_id": 999}, 200, False),
+            ("bob_shared_view", bob, "/albums/1", "GET", None, 200, True),
+            ("bob_edit_denied", bob, "/albums/1", "PUT", {"name": "forbidden"}, 403, False),
+            ("bob_share_change_denied", bob, "/albums/1/shares", "POST", {"user_id": 100}, 403, False),
+            ("carol_view_denied", carol, "/albums/1", "GET", None, 403, False),
+            ("body_identity_ignored", alice, "/albums/2", "PUT", {"name": "tamper", "user_id": 1}, 403, False),
+            ("nonexistent_no_leak", alice, "/albums/999999", "GET", None, 403, False),
+            ("malformed_no_leak", alice, "/albums/not-a-number", "GET", None, 400, False),
+            ("unauthenticated", None, "/albums/1", "GET", None, 401, False),
+            ("tampered_token", tampered, "/albums/1", "GET", None, 401, False),
+            ("expired_token", short, "/albums/1", "GET", None, 401, False),
+            ("wrong_audience", wrong_aud, "/albums/1", "GET", None, 401, False),
+            ("wrong_issuer", wrong_issuer, "/albums/1", "GET", None, 401, False),
+        ]:
+            status, response_body, _ = api_at(api_port, path, user_token, method=method, body=body, mode=mode)
+            record_case(cases, mode, name, status, expected, response_body, expects_data=data)
+    command(compose_command + ["stop", "-t", "1", "openfga"])
+    status, response_body, _ = api_at(api_port, "/albums/1", alice, mode="fga")
+    record_case(cases, "fga", "openfga_stopped_fail_closed", status, 503, response_body)
+    command(compose_command + ["start", "openfga"])
+    headers = {"Authorization": f"Bearer {values['OPENFGA_PRESHARED_KEY']}"}
+    wait_url(f"https://127.0.0.1:{openfga_port}/healthz", headers=headers, seconds=120)
+    return {
+        "passed": all(case["pass"] for case in cases),
+        "case_count": len(cases),
+        "over_permit_count": sum(1 for case in cases if case["expected_status"] != 200 and case["actual_status"] == 200),
+        "cases": cases,
+    }
+
+
+def file_sha256(path):
+    digest = hashlib.sha256()
+    with pathlib.Path(path).open("rb") as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def backup_restore():
+    seed(5)
+    alice, bob = token(0), token(1)
+    before_status, _, _ = api("/albums/1", bob, mode="fga")
+    if before_status != 200:
+        raise RuntimeError("backup_baseline_share_missing")
+    stamp = time.strftime("%Y%m%dT%H%M%S")
+    backup_dir = RUNTIME / "backups" / stamp
+    backup_dir.mkdir(parents=True)
+    backup_start = time.perf_counter()
+    backup_time_utc = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    dump_files = {}
+    for database in ("auth", "app", "authz"):
+        dump = command(
+            COMPOSE + ["exec", "-T", "db", "pg_dump", "-U", "postgres", "--clean", "--if-exists", "--create", "--no-owner", database],
+            capture=True,
+        )
+        path = backup_dir / f"{database}.sql"
+        path.write_text(dump.stdout)
+        path.chmod(0o600)
+        dump_files[database] = {"bytes": path.stat().st_size, "sha256": file_sha256(path)}
+    shutil.copy2(ENV_FILE, backup_dir / "source.env")
+    shutil.copytree(CERTS, backup_dir / "certs")
+    shutil.copytree(IMPORT, backup_dir / "import")
+    backup_duration_ms = (time.perf_counter() - backup_start) * 1000
+
+    removal_ms = ensure_share(alice, "fga", False)
+    original_after_status, original_after_body, _ = api("/albums/1", bob, mode="fga")
+    original_denied = original_after_status == 403 and safe_body(original_after_body)
+
+    restore_values = env_values()
+    project_name = f"oidc-authz-restore-{stamp[-6:]}"
+    restore_values.update(
+        {
+            "AUTHZ_PROJECT_NAME": project_name,
+            "KC_HOST_PORT": "19443",
+            "API_HOST_PORT": "19444",
+            "OPENFGA_HOST_PORT": "19445",
+        }
+    )
+    restore_env = backup_dir / "restore.env"
+    restore_env.write_text("".join(f"{key}={restore_values[key]}\n" for key in sorted(restore_values)))
+    restore_env.chmod(0o600)
+    restore_compose = ["docker", "compose", "--env-file", str(restore_env), "-f", str(ROOT / "authz" / "compose.yaml")]
+    restore_start = time.perf_counter()
+    command(restore_compose + ["up", "-d", "db"])
+    deadline = time.monotonic() + 120
+    while True:
+        ready = command(restore_compose + ["exec", "-T", "db", "pg_isready", "-U", "postgres", "-d", "postgres"], check=False, capture=True)
+        if ready.returncode == 0:
+            break
+        if time.monotonic() >= deadline:
+            raise RuntimeError("restore_database_not_ready")
+        time.sleep(1)
+    for database in ("auth", "app", "authz"):
+        command(
+            restore_compose + ["exec", "-T", "db", "psql", "-v", "ON_ERROR_STOP=1", "-U", "postgres", "-d", "postgres"],
+            input_text=(backup_dir / f"{database}.sql").read_text(),
+        )
+    restore_db_duration_ms = (time.perf_counter() - restore_start) * 1000
+    command(restore_compose + ["up", "-d", "--build", "keycloak", "openfga", "api", "worker"])
+    wait_url("https://127.0.0.1:19443/realms/authz-lab/.well-known/openid-configuration", seconds=240)
+    wait_url(
+        "https://127.0.0.1:19445/healthz",
+        headers={"Authorization": f"Bearer {restore_values['OPENFGA_PRESHARED_KEY']}"},
+        seconds=120,
+    )
+    wait_url("https://127.0.0.1:19444/healthz", seconds=180)
+    service_ready_ms = (time.perf_counter() - restore_start) * 1000
+    restored_bob = token_at(1, 19443, restore_values)
+    restored_status, _, _ = api_at(19444, "/albums/1", restored_bob, mode="fga")
+    old_permission_reappeared = restored_status == 200
+    verify_start = time.perf_counter()
+    restored_e1 = e1_at(19443, 19444, 19445, restore_compose, restore_values)
+    verify_duration_ms = (time.perf_counter() - verify_start) * 1000
+    command(restore_compose + ["down", "--remove-orphans"])
+    result = {
+        "experiment": "E6",
+        "run_id": f"{stamp}-e6-backup-restore",
+        "backup_basis_utc": backup_time_utc,
+        "backup_scope": ["auth_database", "app_database", "authz_database_and_openfga_model", "runtime_configuration", "local_ca_and_certificates"],
+        "dump_manifest": dump_files,
+        "backup_duration_ms": backup_duration_ms,
+        "post_backup_share_removal_completion_ms": removal_ms,
+        "original_after_removal_denied": original_denied,
+        "restore_project": "separate_timestamped_compose_project",
+        "restore_volume_preserved": True,
+        "source_volume_preserved": True,
+        "restore_database_duration_ms": restore_db_duration_ms,
+        "restore_to_service_ready_ms": service_ready_ms,
+        "verification_duration_ms": verify_duration_ms,
+        "restored_backup_point_shared_access": restored_status,
+        "older_backup_permission_reappearance_detected": old_permission_reappeared,
+        "restored_e1": restored_e1,
+        "limitations": [
+            "Local logical dump and restore only; no RPO, multi-host disaster recovery, or replica failover claim.",
+            "The older backup correctly restores its older permission state; newer source-of-truth changes require separate reconciliation before production reopening.",
+        ],
+    }
+    result["passed"] = (
+        original_denied
+        and old_permission_reappeared
+        and restored_e1["passed"]
+        and restored_e1["over_permit_count"] == 0
+    )
+    folder = RAW / result["run_id"]
+    folder.mkdir(parents=True)
+    (folder / "result.json").write_text(json.dumps(result, indent=2))
+    print(json.dumps({
+        "run": result["run_id"],
+        "passed": result["passed"],
+        "backup_ms": backup_duration_ms,
+        "restore_ready_ms": service_ready_ms,
+        "e1_cases": restored_e1["case_count"],
+        "over_permit": restored_e1["over_permit_count"],
+        "older_permission_reappeared": old_permission_reappeared,
+    }))
+    return result
+
+
 def check():
     command([sys.executable, "-m", "py_compile", "authz/app/main.py", "authz/app/worker.py", "scripts/authz_lab.py"])
     command(COMPOSE + ["config", "--quiet"])
-    command([sys.executable, "scripts/public_bundle.py", "--check"])
+    command([sys.executable, "scripts/public_bundle.py"])
     print("Static checks passed; no runtime experiment result inferred.")
 
 
@@ -1088,6 +1744,7 @@ def main():
     seed_parser.add_argument("--shares", type=int, required=True, choices=[5, 50])
     commands.add_parser("e1")
     commands.add_parser("e2")
+    commands.add_parser("e6")
     run_parser = commands.add_parser("run")
     run_parser.add_argument("--name", required=True)
     run_parser.add_argument("--mode", required=True, choices=["direct", "fga"])
@@ -1097,6 +1754,28 @@ def main():
     run_parser.add_argument("--warmup", type=int, default=60)
     run_parser.add_argument("--vus", type=int, default=200)
     run_parser.add_argument("--experiment", default="E3")
+    mixed_parser = commands.add_parser("mixed")
+    mixed_parser.add_argument("--name", required=True)
+    mixed_parser.add_argument("--mode", required=True, choices=["direct", "fga"])
+    mixed_parser.add_argument("--api-rate", required=True, type=int)
+    mixed_parser.add_argument("--login-rate", required=True, type=int)
+    mixed_parser.add_argument("--refresh-rate", required=True, type=int)
+    mixed_parser.add_argument("--shares", type=int, default=5, choices=[5, 50])
+    mixed_parser.add_argument("--duration", type=int, default=180)
+    mixed_parser.add_argument("--warmup", type=int, default=60)
+    mixed_parser.add_argument("--experiment", default="E4")
+    timeline_parser = commands.add_parser("timeline")
+    timeline_parser.add_argument("--name", required=True)
+    timeline_parser.add_argument("--mode", required=True, choices=["direct", "fga"])
+    timeline_parser.add_argument("--profile", required=True, choices=["timeline", "fault"])
+    timeline_parser.add_argument("--api-rate", type=int, default=25)
+    timeline_parser.add_argument("--middle-api-rate", type=int)
+    timeline_parser.add_argument("--login-rate", type=int, default=1)
+    timeline_parser.add_argument("--refresh-rate", type=int, default=5)
+    timeline_parser.add_argument("--baseline", type=int, default=120)
+    timeline_parser.add_argument("--middle", type=int, default=60)
+    timeline_parser.add_argument("--recovery", type=int, default=120)
+    timeline_parser.add_argument("--fault-service", choices=["openfga", "keycloak", "api", "db"])
     commands.add_parser("check")
     stop_parser = commands.add_parser("stop")
     stop_parser.add_argument("--volumes", action="store_true")
@@ -1111,8 +1790,25 @@ def main():
         raise SystemExit(0 if e1() else 1)
     elif args.command == "e2":
         raise SystemExit(0 if e2() else 1)
+    elif args.command == "e6":
+        result = backup_restore()
+        raise SystemExit(0 if result.get("passed") else 1)
     elif args.command == "run":
         run_load(args.name, args.mode, args.rate, args.shares, args.duration, args.warmup, args.vus, args.experiment)
+    elif args.command == "mixed":
+        result = run_mixed(
+            args.name, args.mode, args.api_rate, args.login_rate, args.refresh_rate,
+            args.shares, args.duration, args.warmup, args.experiment,
+        )
+        raise SystemExit(0 if result.get("passed") else 1)
+    elif args.command == "timeline":
+        if (args.profile == "fault") != bool(args.fault_service):
+            parser.error("--fault-service is required only for profile=fault")
+        result = run_timeline(
+            args.name, args.mode, args.profile, args.api_rate, args.login_rate, args.refresh_rate,
+            args.baseline, args.middle, args.recovery, args.middle_api_rate, args.fault_service,
+        )
+        raise SystemExit(0 if result.get("passed") else 1)
     elif args.command == "check":
         check()
     elif args.command == "stop":
