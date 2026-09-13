@@ -98,8 +98,8 @@ def run_entry(folder, formal):
         classification = "diagnostic"
         reason = "smoke or preflight"
     elif not value:
-        classification = "incomplete"
-        reason = "no final aggregate"
+        classification = "aborted"
+        reason = "interrupted before final aggregate; complete formal rerun retained"
     else:
         classification = "superseded"
         reason = "retained pre-fix or preliminary run"
@@ -756,7 +756,15 @@ def main(require_complete=False):
         "|---|---|---|---|---:|---|",
     ]
     for entry in all_entries:
-        passed = "合格" if entry["passed"] is True else "不合格" if entry["passed"] is False else "判定不能"
+        passed = (
+            "中断・再試験済"
+            if entry["classification"] == "aborted"
+            else "合格"
+            if entry["passed"] is True
+            else "不合格"
+            if entry["passed"] is False
+            else "参考run"
+        )
         lines.append(f'| `{entry["run_id"]}` | {entry["classification"]} | {entry["experiment"] or "-"} | {entry["mode"] or "-"} | {passed} | {entry["reason"]} |')
     (RESULTS / "authz-experiment-ledger.md").write_text("\n".join(lines) + "\n")
     outcome = {"runs": len(all_entries), "formal": len(formal) + len(e0_entries), "status": summary["status"]}
