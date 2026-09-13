@@ -12,6 +12,7 @@ import hashlib
 import json
 import os
 import pathlib
+import re
 import secrets
 import shutil
 import ssl
@@ -1210,7 +1211,14 @@ TIMELINE_METRICS = {
 
 
 def parse_sample_time(value):
-    return datetime.datetime.fromisoformat(value.replace("Z", "+00:00")).timestamp()
+    """Parse k6 RFC3339 timestamps with up to nanosecond precision."""
+    value = value.replace("Z", "+00:00")
+    match = re.fullmatch(r"(.+?)(?:\.(\d+))?([+-]\d{2}:\d{2})", value)
+    if not match:
+        raise ValueError(f"Invalid RFC3339 timestamp: {value!r}")
+    fraction = (match.group(2) or "").ljust(6, "0")[:6]
+    normalized = f"{match.group(1)}.{fraction}{match.group(3)}"
+    return datetime.datetime.fromisoformat(normalized).timestamp()
 
 
 def read_timeline_points(path):
