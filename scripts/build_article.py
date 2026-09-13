@@ -121,9 +121,70 @@ def figures(data):
         path.write_text('\n'.join(line.rstrip() for line in path.read_text().splitlines()) + '\n')
 
 
+def reader_figures(data):
+    import matplotlib
+    matplotlib.use('Agg')
+    from matplotlib import font_manager
+    import matplotlib.pyplot as plt
+    available = {font.name for font in font_manager.fontManager.ttflist}
+    family = next((name for name in ['Hiragino Sans', 'Noto Sans CJK JP', 'IPAexGothic'] if name in available), None)
+    if family is None:
+        raise SystemExit('Install a Japanese font: Hiragino Sans, Noto Sans CJK JP or IPAexGothic.')
+    plt.rcParams.update({'font.family': family, 'font.size': 12, 'svg.hashsalt': 'oidc-reader'})
+    out = ARTICLE / 'figures'
+    preview = ARTICLE / '.preview'
+    out.mkdir(exist_ok=True)
+    preview.mkdir(exist_ok=True)
+    fig, axes = plt.subplots(1, 2, figsize=(10, 4.8), layout='constrained')
+    labels = ['A：ログインだけ', 'B：ログイン＋更新']
+    for index, name in enumerate(['login-only', 'steady-mixed']):
+        rows = data['comparison'][name]
+        values_by_panel = [[row['flows']['login']['p99_ms'] for row in rows],
+                           [row['resources']['keycloak']['cpu_median_pct'] for row in rows]]
+        for ax, values in zip(axes, values_by_panel):
+            ax.scatter([index-.04, index, index+.04], values, s=50,
+                       color=['#2563eb', '#d97706'][index], zorder=3)
+            ax.hlines(median(values), index-.16, index+.16, color='#222', linewidth=2)
+            ax.annotate(f'中央値 {median(values):.0f}', (index, max(values)),
+                        xytext=(0, 12), textcoords='offset points', ha='center')
+    for ax in axes:
+        ax.set_xticks([0, 1], labels)
+        ax.set_xlim(-.5, 1.5)
+        ax.spines[['top', 'right']].set_visible(False)
+        ax.grid(axis='y', alpha=.2)
+    axes[0].set(title='ログインの応答時間は近い', ylabel='ログイン p99（ms）', ylim=(0, 110))
+    axes[1].set(title='CPUの観測値には差がある', ylabel='CPU使用率（%）', ylim=(0, 225))
+    axes[1].axhline(200, color='#777', linestyle='--', linewidth=1)
+    axes[1].text(-.4, 204, '今回の上限：200%（2 CPU）', fontsize=10, color='#555')
+    fig.suptitle('ログインは毎秒20回で固定。Bだけ毎秒100回の更新を追加', fontsize=14)
+    fig.savefig(out/'reader-comparison.svg', metadata={'Date': None})
+    fig.savefig(preview/'reader-comparison.png', dpi=180)
+    plt.close(fig)
+    exploration = next(row for row in data['exploration']['login'] if row['login_rate'] == 20)
+    rows = [exploration] + data['comparison']['login-only']
+    fig, axes = plt.subplots(1, 2, figsize=(10, 4.5), layout='constrained')
+    for ax, values, title, unit in [
+        (axes[0], [r['flows']['login']['p99_ms'] for r in rows], 'ログインの応答時間', 'p99（ms）'),
+        (axes[1], [r['resources']['keycloak']['cpu_median_pct'] for r in rows], 'CPUの観測値', 'CPU使用率の中央値（%）')]:
+        ax.bar(['予備実験', 'A：1回目', 'A：2回目', 'A：3回目'], values,
+               color=['#94a3b8', '#2563eb', '#2563eb', '#2563eb'], width=.55)
+        for index, value in enumerate(values):
+            ax.text(index, value + max(values)*.025, f'{value:g}', ha='center', fontsize=11)
+        ax.set(title=title, ylabel=unit, ylim=(0, max(values)*1.25))
+        ax.spines[['top', 'right']].set_visible(False)
+        ax.grid(axis='y', alpha=.2)
+    fig.suptitle('同じ毎秒20ログインでも、予備実験では異なる値が出た\n原因は未解明。容量を判断する前に再確認が必要', fontsize=13)
+    fig.savefig(out/'reader-discrepancy.svg', metadata={'Date': None})
+    fig.savefig(preview/'reader-discrepancy.png', dpi=180)
+    plt.close(fig)
+    for path in out.glob('reader-*.svg'):
+        path.write_text('\n'.join(line.rstrip() for line in path.read_text().splitlines()) + '\n')
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--figures', action='store_true', help='Requires matplotlib; creates SVG and local PNG previews')
+    parser.add_argument('--reader-figures', action='store_true', help='Create focused Japanese article figures')
     args = parser.parse_args()
     data = json.loads(SOURCE.read_text())
     audit = verify(data)
@@ -132,6 +193,8 @@ def main():
     (ARTICLE/'generated-results.md').write_text(tables(data))
     if args.figures:
         figures(data)
+    if args.reader_figures:
+        reader_figures(data)
     print('Verified all 12 published comparison trials; article tables generated. Raw measurements not replayed.')
 
 
