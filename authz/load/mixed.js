@@ -86,6 +86,7 @@ export const options = {
   scenarios: scenarios(),
   thresholds: {
     'authz_attempts{phase:measure}': ['count>0'],
+    'authz_completed{phase:measure}': ['count>0'],
     'authz_expected_allow{phase:measure}': ['count>0'],
     'authz_expected_deny{phase:measure}': ['count>0'],
     'authz_decision_correct{phase:measure}': ['rate>=0.999'],

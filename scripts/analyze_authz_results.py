@@ -151,6 +151,25 @@ def authz_trial(folder):
         "login_rate_rps": value.get("login_rate_rps", manifest.get("login_rate_rps")),
         "refresh_rate_rps": value.get("refresh_rate_rps", manifest.get("refresh_rate_rps")),
         "shares_per_album": value.get("shares_per_album", manifest.get("shares_per_album")),
+        "planned": value.get("planned"),
+        "started": value.get("started"),
+        "sent": value.get("sent"),
+        "completed": (
+            value.get("started")
+            if value.get("completed") == 0
+            and value.get("started") == value.get("sent")
+            and value.get("unexpected_or_timeout") == 0
+            and value.get("correct_decisions") == value.get("started")
+            else value.get("completed")
+        ),
+        "completed_basis": (
+            "derived_from_started_equals_sent_equals_correct_with_no_unexpected"
+            if value.get("completed") == 0
+            and value.get("started") == value.get("sent")
+            and value.get("unexpected_or_timeout") == 0
+            and value.get("correct_decisions") == value.get("started")
+            else value.get("completed_basis", "phase_submetric")
+        ),
         "api_p99_ms": rounded(value.get("latency_ms", {}).get("whole", {}).get("p(99)")),
         "allow_p99_ms": rounded(value.get("latency_ms", {}).get("expected_allow", {}).get("p(99)")),
         "deny_p99_ms": rounded(value.get("latency_ms", {}).get("expected_deny", {}).get("p(99)")),
@@ -558,7 +577,7 @@ def e5_svg(trials):
 
 
 def stability_svg(stability):
-    parts = svg_start("E7 one-hour resource stability", "Relative time only; approximately 10-second observations. Missing samples are not filled with zero.", height=700)
+    parts = svg_start("E7 one-hour resource trend", "Relative time only; approximately 10-second observations. Missing samples are not filled with zero.", height=700)
     x, y, width, height = 75, 90, 950, 300
     maximum = max(point for row in stability["series"] for point in row["memory_mib"].values()) * 1.08
     duration = max(1, max(row["elapsed_s"] for row in stability["series"]))

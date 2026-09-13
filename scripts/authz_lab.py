@@ -934,6 +934,15 @@ def aggregate_load(folder, manifest, resources):
     over = metric_values(summary, "authz_over_permit{phase:measure}")
     under = metric_values(summary, "authz_under_permit{phase:measure}")
     dropped = metric_values(summary, "dropped_iterations")
+    completed_count = completed.get("count")
+    completed_basis = "phase_submetric"
+    if completed_count is None:
+        total_attempts = metric_values(summary, "authz_attempts").get("count")
+        total_completed = metric_values(summary, "authz_completed").get("count")
+        if total_attempts is None or total_completed != total_attempts:
+            raise ValueError("authz_completed phase submetric missing and total counters do not prove completion")
+        completed_count = attempts.get("count", 0)
+        completed_basis = "derived_when_total_completed_equals_total_attempts"
 
     def trend(name):
         values = metric_values(summary, name)
@@ -948,7 +957,8 @@ def aggregate_load(folder, manifest, resources):
         "planned": manifest["rate_rps"] * manifest["duration_s"],
         "started": int(attempts.get("count", 0)),
         "sent": int(attempts.get("count", 0)),
-        "completed": int(completed.get("count", 0)),
+        "completed": int(completed_count),
+        "completed_basis": completed_basis,
         "expected_allow": int(allow.get("count", 0)),
         "expected_deny": int(deny.get("count", 0)),
         "correct_decisions": int(correct.get("passes", 0)),

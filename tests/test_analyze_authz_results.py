@@ -47,6 +47,29 @@ class AnalyzeAuthzResultsTest(unittest.TestCase):
             provenance,
         )
 
+    def test_authz_trial_derives_completed_only_from_complete_classification(self):
+        value = {
+            "started": 100,
+            "sent": 100,
+            "completed": 0,
+            "correct_decisions": 100,
+            "unexpected_or_timeout": 0,
+        }
+        original_result = analysis.result_for
+        original_manifest = analysis.manifest_for
+        try:
+            analysis.result_for = lambda _: value
+            analysis.manifest_for = lambda _: {}
+            trial = analysis.authz_trial(Path("synthetic"))
+        finally:
+            analysis.result_for = original_result
+            analysis.manifest_for = original_manifest
+        self.assertEqual(trial["completed"], 100)
+        self.assertEqual(
+            trial["completed_basis"],
+            "derived_from_started_equals_sent_equals_correct_with_no_unexpected",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
