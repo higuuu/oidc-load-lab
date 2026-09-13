@@ -190,6 +190,10 @@ def group_summary(trials):
         "over_permit_total": sum(item.get("over_permit") or 0 for item in trials),
         "dropped_total": sum(item.get("dropped_iterations") or 0 for item in trials),
         "observation_errors_total": sum(item.get("observation_errors") or 0 for item in trials),
+        "cpu_median_pct": {
+            role: stats(item.get("cpu_median_pct", {}).get(role) for item in trials)
+            for role in ("api", "openfga", "keycloak", "db", "worker", "k6")
+        },
     }
 
 
@@ -414,11 +418,150 @@ def bar_svg(title, subtitle, rows, maximum, suffix=" ms"):
     return "\n".join(parts)
 
 
+def e3_svg(groups):
+    parts = svg_start(
+        "E3 authorization comparison",
+        "Median of three formal trials; success is authorization decision accuracy; CPU 100% = one core.",
+        height=610,
+    )
+    labels = {
+        "low": "25 rps / shares 5",
+        "high": "100 rps / shares 5",
+        "shares50": "100 rps / shares 50",
+    }
+    parts += [
+        '<text x="48" y="92" font-size="11" font-weight="700">condition / mode</text>',
+        '<text x="250" y="92" font-size="11" font-weight="700">API p99 (0–10 ms)</text>',
+        '<text x="610" y="92" font-size="11" font-weight="700">accuracy</text>',
+        '<text x="705" y="92" font-size="11" font-weight="700">API CPU median (0–30%)</text>',
+        '<text x="1002" y="92" text-anchor="end" font-size="11" font-weight="700">FGA CPU</text>',
+    ]
+    colors = {"direct": "#2563eb", "fga": "#dc2626"}
+    row = 0
+    for level in ("low", "high", "shares50"):
+        for mode in ("direct", "fga"):
+            summary = groups[f"{level}_{mode}"]["summary"]
+            p99 = summary["api_p99_ms"]["median"]
+            accuracy = summary["decision_accuracy"]["median"] * 100
+            api_cpu = summary["cpu_median_pct"]["api"]["median"]
+            fga_cpu = summary["cpu_median_pct"]["openfga"]["median"]
+            y = 122 + row * 68
+            color = colors[mode]
+            parts += [
+                f'<text x="48" y="{y + 17}" font-size="11">{html.escape(labels[level])} / {mode}</text>',
+                f'<rect x="250" y="{y}" width="{min(330, p99 / 10 * 330):.1f}" height="24" fill="{color}" rx="3"/>',
+                f'<text x="{258 + min(330, p99 / 10 * 330):.1f}" y="{y + 17}" font-size="10">{p99:.3f} ms</text>',
+                f'<text x="610" y="{y + 17}" font-size="11">{accuracy:.3f}%</text>',
+                f'<rect x="705" y="{y}" width="{min(240, api_cpu / 30 * 240):.1f}" height="24" fill="#0f766e" rx="3"/>',
+                f'<text x="{713 + min(240, api_cpu / 30 * 240):.1f}" y="{y + 17}" font-size="10">{api_cpu:.2f}%</text>',
+                f'<text x="1002" y="{y + 17}" text-anchor="end" font-size="11">{fga_cpu:.2f}%</text>',
+            ]
+            row += 1
+    parts += [
+        '<text x="48" y="560" font-size="11" fill="#667085">All rows: over-permit 0, dropped iterations 0, observer errors 0. CPU values are medians of per-run medians.</text>',
+        '</g></svg>',
+    ]
+    return "\n".join(parts)
+
+
+def e4_svg(groups):
+    parts = svg_start(
+        "E4 mixed OIDC and authorization load",
+        "Median p99 of three trials per condition; login and refresh success were 100% in every run.",
+        height=500,
+    )
+    parts += [
+        '<text x="42" y="92" font-size="11" font-weight="700">condition / mode</text>',
+        '<text x="255" y="92" font-size="11" font-weight="700">API p99 (10 ms)</text>',
+        '<text x="525" y="92" font-size="11" font-weight="700">login p99 (150 ms)</text>',
+        '<text x="795" y="92" font-size="11" font-weight="700">refresh p99 (20 ms)</text>',
+    ]
+    labels = {"low": "API25 login1 refresh5", "high": "API25 login5 refresh20"}
+    colors = {"direct": "#2563eb", "fga": "#dc2626"}
+    for index, (level, mode) in enumerate(
+        (level, mode) for level in ("low", "high") for mode in ("direct", "fga")
+    ):
+        summary = groups[f"{level}_{mode}"]["summary"]
+        values = (
+            (summary["api_p99_ms"]["median"], 10, 255),
+            (summary["login_p99_ms"]["median"], 150, 525),
+            (summary["refresh_p99_ms"]["median"], 20, 795),
+        )
+        y = 125 + index * 75
+        parts.append(f'<text x="42" y="{y + 17}" font-size="11">{labels[level]} / {mode}</text>')
+        for value, maximum, x in values:
+            width = min(205, value / maximum * 205)
+            parts += [
+                f'<rect x="{x}" y="{y}" width="{width:.1f}" height="24" fill="{colors[mode]}" rx="3"/>',
+                f'<text x="{x + width + 6:.1f}" y="{y + 17}" font-size="10">{value:.2f}</text>',
+            ]
+    parts += [
+        '<text x="42" y="447" font-size="11" fill="#667085">All flows passed their thresholds; authorization accuracy 100%; over-permit and dropped iterations 0.</text>',
+        '</g></svg>',
+    ]
+    return "\n".join(parts)
+
+
+def e5_svg(trials):
+    parts = svg_start(
+        "E5 fault injection and recovery",
+        "Median authorization decision accuracy across three trials; fault active from 60 to 120 seconds.",
+        height=590,
+    )
+    x, y, width, height = 75, 100, 950, 350
+    parts += [
+        f'<rect x="{x + width * .2}" y="{y}" width="{width * .2}" height="{height}" fill="#fee2e2"/>',
+        f'<text x="{x + width * .3}" y="{y + 18}" text-anchor="middle" font-size="11" fill="#991b1b">dependency stopped</text>',
+    ]
+    for index in range(5):
+        py = y + height - index / 4 * height
+        parts += [
+            f'<path d="M{x} {py:.1f} H{x + width}" stroke="#e2e8f0"/>',
+            f'<text x="{x - 9}" y="{py + 4:.1f}" text-anchor="end" font-size="10">{index * 25}%</text>',
+        ]
+    by_service = {}
+    for trial in trials:
+        service = trial["run_id"].split("e5-final-", 1)[1].split("-trial", 1)[0]
+        by_service.setdefault(service, []).append(trial)
+    colors = {"openfga": "#dc2626", "keycloak": "#7c3aed", "api": "#2563eb", "db": "#d97706"}
+    for service, color in colors.items():
+        service_trials = by_service[service]
+        starts = sorted({window["start_s"] for trial in service_trials for window in trial["windows_10s"]})
+        points = []
+        for start in starts:
+            accuracies = [
+                window["authz"]["decision_accuracy"]
+                for trial in service_trials
+                for window in trial["windows_10s"]
+                if window["start_s"] == start
+            ]
+            points.append((start + 5, median(accuracies) * 100))
+        encoded = " ".join(
+            f'{x + second / 300 * width:.1f},{y + height - accuracy / 100 * height:.1f}'
+            for second, accuracy in points
+        )
+        parts.append(f'<polyline points="{encoded}" fill="none" stroke="{color}" stroke-width="2.5"/>')
+    for second in (0, 60, 120, 180, 240, 300):
+        px = x + second / 300 * width
+        parts.append(f'<text x="{px:.1f}" y="{y + height + 24}" text-anchor="middle" font-size="10">{second}s</text>')
+    for index, (service, color) in enumerate(colors.items()):
+        lx = 180 + index * 205
+        parts += [
+            f'<path d="M{lx} 515 h28" stroke="{color}" stroke-width="3"/>',
+            f'<text x="{lx + 36}" y="519" font-size="11">{service}</text>',
+        ]
+    parts += [
+        '<text x="75" y="555" font-size="11" fill="#667085">Every trial: over-permit 0; final consistency passed; recovery confirmation 40 seconds.</text>',
+        '</g></svg>',
+    ]
+    return "\n".join(parts)
+
+
 def stability_svg(stability):
-    parts = svg_start("E7 one-hour memory stability", "Relative time only; approximately 10-second observations. Missing samples are not filled with zero.", height=650)
-    x, y, width, height = 75, 100, 950, 390
+    parts = svg_start("E7 one-hour resource stability", "Relative time only; approximately 10-second observations. Missing samples are not filled with zero.", height=700)
+    x, y, width, height = 75, 90, 950, 300
     maximum = max(point for row in stability["series"] for point in row["memory_mib"].values()) * 1.08
-    duration = max(row["elapsed_s"] for row in stability["series"])
+    duration = max(1, max(row["elapsed_s"] for row in stability["series"]))
     for index in range(5):
         py = y + height - height * index / 4
         value = maximum * index / 4
@@ -430,13 +573,45 @@ def stability_svg(stability):
             for row in stability["series"]
         )
         parts.append(f'<polyline points="{points}" fill="none" stroke="{color}" stroke-width="2"/>')
-    parts += [f'<text x="{x}" y="{y + height + 25}" font-size="10">0 min</text>', f'<text x="{x + width}" y="{y + height + 25}" text-anchor="end" font-size="10">60 min</text>', f'<text x="20" y="{y + height / 2}" transform="rotate(-90 20 {y + height / 2})" font-size="11">MiB</text>']
+    parts += [f'<text x="{x}" y="{y + height + 20}" font-size="10">0 min</text>', f'<text x="{x + width}" y="{y + height + 20}" text-anchor="end" font-size="10">{duration / 60:.0f} min</text>', f'<text x="20" y="{y + height / 2}" transform="rotate(-90 20 {y + height / 2})" font-size="11">MiB</text>']
     for index, (role, color) in enumerate(colors.items()):
         lx = 75 + (index % 3) * 220
-        ly = 550 + (index // 3) * 28
+        ly = 430 + (index // 3) * 24
         slope_value = stability["services"][role]["linear_slope_mib_per_hour"]
         parts += [f'<path d="M{lx} {ly} h25" stroke="{color}" stroke-width="3"/>', f'<text x="{lx + 33}" y="{ly + 4}" font-size="11">{role}: slope {slope_value:+.2f} MiB/h</text>']
-    parts += ['<text x="75" y="622" font-size="11" fill="#667085">A single hour is not evidence of long-term stability.</text>', '</g></svg>']
+    totals = []
+    pending = []
+    for row in stability["series"]:
+        connection_values = list(row["connections"].values())
+        if all(value is not None for value in connection_values):
+            totals.append((row["elapsed_s"], sum(connection_values)))
+        if row["outbox_pending"] is not None:
+            pending.append((row["elapsed_s"], row["outbox_pending"]))
+    lower_y, lower_height = 515, 90
+    lower_max = max(1, max((value for _, value in totals + pending), default=1))
+    parts += [
+        f'<path d="M{x} {lower_y + lower_height} H{x + width}" stroke="#94a3b8"/>',
+        f'<text x="20" y="{lower_y + lower_height / 2}" transform="rotate(-90 20 {lower_y + lower_height / 2})" font-size="11">count</text>',
+        '<text x="75" y="500" font-size="11" font-weight="700">DB connections (total) and Outbox backlog</text>',
+    ]
+    for points, color, dash in ((totals, "#111827", ""), (pending, "#dc2626", ' stroke-dasharray="5 4"')):
+        encoded = " ".join(
+            f'{x + second / duration * width:.1f},{lower_y + lower_height - value / lower_max * lower_height:.1f}'
+            for second, value in points
+        )
+        parts.append(f'<polyline points="{encoded}" fill="none" stroke="{color}" stroke-width="2"{dash}/>')
+    db_first = totals[0][1] if totals else None
+    db_last = totals[-1][1] if totals else None
+    db_peak = max((value for _, value in totals), default=None)
+    outbox_first = pending[0][1] if pending else None
+    outbox_last = pending[-1][1] if pending else None
+    outbox_peak = max((value for _, value in pending), default=None)
+    parts += [
+        f'<text x="75" y="635" font-size="11">DB total: {db_first}→{db_last}, peak {db_peak}</text>',
+        f'<text x="330" y="635" font-size="11" fill="#dc2626">Outbox: {outbox_first}→{outbox_last}, peak {outbox_peak}</text>',
+        '<text x="75" y="675" font-size="11" fill="#667085">A single hour is not evidence of long-term stability or absence of memory leaks.</text>',
+        '</g></svg>',
+    ]
     return "\n".join(parts)
 
 
@@ -547,26 +722,9 @@ def main(require_complete=False):
     }
     (PUBLIC / "summary.json").write_text(json.dumps(summary, indent=2, ensure_ascii=False) + "\n")
 
-    e3_rows = []
-    for level in ("low", "high", "shares50"):
-        for mode, color in (("direct", "#2563eb"), ("fga", "#dc2626")):
-            value = e3_groups[f"{level}_{mode}"]["summary"]["api_p99_ms"]["median"]
-            e3_rows.append((f"{level} / {mode}", value, color))
-    (PUBLIC / "e3-comparison.svg").write_text(bar_svg("E3 authorization p99", "Median of three formal trials per condition; 80% allow / 20% deny.", e3_rows, 10))
-
-    e4_rows = []
-    for level in ("low", "high"):
-        for mode, color in (("direct", "#2563eb"), ("fga", "#dc2626")):
-            value = e4_groups[f"{level}_{mode}"]["summary"]["api_p99_ms"]["median"]
-            e4_rows.append((f"{level} / {mode}", value, color))
-    (PUBLIC / "e4-mixed.svg").write_text(bar_svg("E4 mixed-load API p99", "Keycloak login and refresh ran concurrently; median of three trials.", e4_rows, 10))
-
-    fault_rows = []
-    colors = {"openfga": "#dc2626", "keycloak": "#7c3aed", "api": "#2563eb", "db": "#d97706"}
-    for item in e5_raw:
-        service = next(folder for folder in folders if folder.name == item["run_id"]).name.split("e5-final-", 1)[1].split("-trial", 1)[0]
-        fault_rows.append((item["run_id"].split("-trial", 1)[1].split("-", 1)[0] + " / " + service, item["recovery_confirmation_s"], colors[service]))
-    (PUBLIC / "e5-recovery.svg").write_text(bar_svg("E5 recovery confirmation", "Seconds after restart until three consecutive passing 10-second windows.", fault_rows, 60, " s"))
+    (PUBLIC / "e3-comparison.svg").write_text(e3_svg(e3_groups))
+    (PUBLIC / "e4-mixed.svg").write_text(e4_svg(e4_groups))
+    (PUBLIC / "e5-recovery.svg").write_text(e5_svg(e5_raw))
     if e7:
         (PUBLIC / "e7-stability.svg").write_text(stability_svg(e7["stability"]))
 
