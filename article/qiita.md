@@ -20,6 +20,19 @@
 
 **Keycloakは、ログインを受け付け、本人を確認してトークンを発行するOSSの認証サーバです。** **OpenFGAは、「誰が、どの対象に、何をできるか」を関係データから判定するOSSです。** 業務APIはその判定を使い、実際にデータを返すか、操作を拒否するかを決めます。[Keycloak](https://www.keycloak.org/)、[OpenFGAの概念](https://openfga.dev/docs/concepts)
 
+### Keycloak・OpenFGA・SDKは、それぞれ何なのか
+
+KeycloakとOpenFGAは、**業務APIに組み込むライブラリではなく、それぞれ別プロセスで起動するサーバ**です。このクラウド案では別のPodとして動かします。PodはKubernetesがコンテナを配置・管理する単位です。
+
+| 部品 | 担当すること | 今回の使い方・選ぶ理由 |
+|---|---|---|
+| Keycloak | ユーザー管理、ログイン、SSO、OIDCなどの認証機能 | パスワード認証やトークン発行を自作せず、標準プロトコルでアプリと接続する |
+| OpenFGA | 利用者と対象の関係を保存し、権限を判定する | アルバムごとの共有ルールを、複数の業務APIで共通化する |
+| OpenFGAクライアントSDK | APIからOpenFGAへの要求・応答を扱うライブラリ | 業務APIのプロセス内に入れる。認可の判定エンジンやDBを内包するものではない |
+| 業務API | アルバムの取得・編集・共有など | トークンを検証し、認可結果に従って処理を許可・拒否する |
+
+Keycloakにもロールや認可機能があります。本案でOpenFGAを別に置くのは、Keycloakに認可機能がないからではなく、対象ごとの共有関係を独立したモデルとサービスで管理するためです。ログイン画面、本人確認、パスワードの保存はOpenFGAに任せません。[Keycloakの機能](https://www.keycloak.org/)、[OpenFGAの構成](https://openfga.dev/docs/concepts)
+
 次の図の①と②は、別の通信です。ログインのたびに写真を取得するわけでも、写真を取得するたびにパスワードを送るわけでもありません。
 
 ```mermaid
@@ -45,6 +58,18 @@ flowchart TB
 
 今回OpenFGAを置く理由は、**アルバムごとの共有を複数のAPIで同じルールにしたいから**です。サービスとDBが増える運用コストを、この必要性と引き換えに受け入れる設計です。
 
+### まず小さく始め、必要になった部品を分離する
+
+この共有機能だけなら、業務APIが業務DBの所有者・共有先を調べる構成でも実装できます。OpenFGAを使えば常に速くなる、という選定ではありません。
+
+| 段階 | 構成 | 分離するきっかけ |
+|---|---|---|
+| 最小構成 | Keycloak＋業務API。認可は業務DBで判定 | API内でルールを管理できる間はこれで始める |
+| 判定の共通化 | OpenFGAを別プロセスで追加 | 複数APIで同じ権限モデルを使いたい |
+| 資源・障害の分離 | 用途別DBインスタンスと冗長構成 | 干渉、障害範囲、独立した増強・保守が問題になる |
+
+OpenFGAは本番では専用DBを推奨していますが、**専用の論理DBと専用のDBインスタンスは区別します。** 節約案では1台のPostgreSQLに認証・認可・業務の論理DBと接続ユーザーを分けて置けます。その場合、CPU・接続数・障害・メンテナンスは共有します。後半の3クラウド図は、分離を進めた段階の案です。[OpenFGAのDB推奨](https://openfga.dev/docs/best-practices/running-in-production)
+
 ## 2. 構成を決める前に、何を守るかを決める
 
 「登録者100万人」だけでは必要な台数は決まりません。ログイン、更新、アルバム閲覧では、負荷がかかる場所が異なります。
@@ -62,6 +87,43 @@ flowchart TB
 この記事の設計例では、仮の受入目標をログインp99 2秒以内、更新p99 500ms以内、閲覧API p99 300ms以内、月間可用性99.9%と置きます。復旧目標はRTO 60分・RPO 5分です。これらは測定結果から算出した値でも、達成済みの値でもありません。事業上の許容範囲と費用に合わせて調整し、その目標を守れる負荷を後で測ります。後半のMac miniの結果を、そのまま必要台数にはしません。登録・メール確認・パスワード再設定・MFA・外部IdP連携も本番の要件ですが、今回の測定には含みません。
 
 ## 3. 1回のアクセスを追うと、実装する場所がわかる
+
+### 矢印の正体：どのプロトコルで呼び出すのか
+
+本案では、アプリとサーバ、サーバ同士のAPI呼び出しに**HTTPS**を使います。HTTPSはTLSで保護したHTTP通信です。OIDCやOAuthはその上でやり取りする認証・認可の手順で、Kubernetes専用の通信方式ではありません。
+
+| 呼び出し元 → 先 | 本案の通信方式 | 送るもの・返るもの |
+|---|---|---|
+| 利用者のアプリ → Keycloak | HTTPS上のOIDC/OAuth | 認可リクエスト、認可コード交換、トークン更新 |
+| 利用者のアプリ → 業務API | HTTPS | アクセストークンと業務要求、業務データ |
+| 業務API → Keycloak | HTTPSでJWKS取得 | 検証用の公開鍵。通常の業務要求ごとには取得しない |
+| 業務APIのSDK → OpenFGA | **HTTPS＋JSONのHTTP API** | 利用者・権限・対象を指定したCheck、許可／拒否 |
+| Outboxワーカー → OpenFGA | HTTPS＋JSONのHTTP API | 共有関係の追加・削除 |
+| Keycloak / OpenFGA / 業務API → 各DB | PostgreSQLの通信プロトコル＋TLS | DBドライバからの読み書き。HTTPではない |
+
+OpenFGAはHTTP APIとgRPCを提供しますが、**この記事ではHTTP APIを選びます。** JSONで要求を確認しやすく、HTTPクライアントやSDK、既存のTLS・監視設定を使えることを優先します。gRPCを採用する場合は、クライアント・HTTP/2の経路・接続分散まで合わせて設計します。「SDKを入れたら自動的にgRPCになる」という意味ではありません。[OpenFGAのAPI例](https://openfga.dev/docs/getting-started/perform-check)、[HTTP/gRPCのTLS設定](https://openfga.dev/docs/best-practices/running-in-production)
+
+Kubernetes上の認可呼び出しだけを拡大すると、次の構成です。
+
+```mermaid
+flowchart TB
+    subgraph AP["業務APIのPod"]
+        LOGIC["業務処理"] -->|"プロセス内の関数呼び出し"| SDK["OpenFGA SDK"]
+    end
+    SDK -->|"HTTPS・JSON"| SVC["OpenFGA用Service：固定の接続先"]
+    SVC -->|"TCP接続を振り分け"| F1["OpenFGA Pod A"]
+    SVC -->|"TCP接続を振り分け"| F2["OpenFGA Pod B"]
+    F1 -->|"PostgreSQL通信・TLS"| DB[("認可DB")]
+    F2 -->|"PostgreSQL通信・TLS"| DB
+```
+
+SDKに指定する接続先の例は `https://openfga.authz.svc.cluster.local` です。`openfga`はService名、`authz`はnamespace名で、クラスタのDNSドメインが`cluster.local`の場合の例です。PodのIPを直接埋め込みません。Serviceは別の認可アプリではなく、変わるPod群へ接続するためのKubernetesの仕組みです。[ServiceとDNS](https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/)
+
+この例ではServiceの443番ポートをOpenFGAのTLS待受へ転送し、接続先名に合う証明書と、API側で信頼するCAを設定します。Serviceを作るだけでHTTPSになるわけではありません。SDKにはサーバ間認証用の資格情報も設定し、利用者のアクセストークンとは別に管理します。認可対象の本人IDは、業務APIが検証した利用者トークンから決めます。
+
+APIはCheckの結果を待つため、通信・判定・DB待ちが閲覧の遅延に加わります。接続を再利用し、業務API全体の制限時間より短いタイムアウトを置き、失敗時に無制限に再試行しません。通常のServiceは接続単位で振り分けるため、接続を長く保持すれば要求数が各Podへ均等になるとは限りません。
+
+**同じクラスタ内でも、別ノード・別ゾーンならネットワークを通ります。** Pod間通信だから速いとは判断せず、APIから見たCheckの応答時間、OpenFGAの処理時間、DB待ちを測って切り分けます。認可部分はまだ未測定です。
 
 ### ログインと更新はKeycloakへ
 
@@ -221,6 +283,27 @@ flowchart TB
 
 ここでは、**単一リージョン・複数ゾーンのKubernetesと、マネージドPostgreSQL**へ配置する案を示します。GCP・AWS・Azureで同じ責任分担を保つための選択で、Kubernetes自体が必須という意味ではありません。運用経験がなければ、VM構成やマネージド認証との費用・運用比較も必要です。
 
+### なぜKubernetesを選ぶのか。選ばなくても通信できるのか
+
+**KeycloakとOpenFGAをHTTPで呼ぶために、Kubernetesは必要ありません。** Docker Composeならサービス名、VMなら内部DNSやロードバランサを接続先にして、同じ通信を実装できます。
+
+ここでKubernetesを選ぶ理由は、複数のサーバを増減・交換しながら運用する仕組みを共通化したいからです。
+
+| 必要なこと | Kubernetesで使う仕組み | 自動では解決しないこと |
+|---|---|---|
+| Podが入れ替わっても同じ名前で接続 | Service（ClusterIP）とクラスタDNS | TLS証明書やサーバ間認証 |
+| 複数のPodへ接続を振り分ける | Serviceとネットワーク実装 | リクエストごとの均等配分、処理速度の保証 |
+| 落ちたプロセスの再起動・必要数の維持 | kubelet、Deployment等のコントローラ | DB障害、アプリのバグの修復 |
+| 更新しながらサービスを続ける | readiness、ローリング更新、PDB | DBスキーマやKeycloakバージョン間の互換性 |
+| ゾーンへ分散して配置 | topology spread、ノード配置 | 1ゾーン喪失後に必要な容量の確保 |
+| 許可した経路だけ通信させる | NetworkPolicy対応のネットワーク実装 | デフォルトでの遮断、通信の暗号化 |
+
+ClusterIPはクラスタ内から使う接続先です。それだけで、クラスタ内の他のPodからのアクセスを禁止するわけではありません。NetworkPolicyでAPI・ワーカーからの必要な通信を許可し、DNSやDB接続の経路も設定します。ポリシーを実際に強制できるネットワークプラグインが必要です。[Kubernetes Service](https://kubernetes.io/docs/concepts/services-networking/service/)、[NetworkPolicy](https://kubernetes.io/docs/concepts/services-networking/network-policies/)
+
+その代わり、Kubernetesにはクラスタ・ノード・ネットワーク・アップグレードを管理する負担があります。小規模なサービスなら、まずVMやComposeで機能を確認し、複数サービスの冗長運用が必要になった時点で採用を判断します。GKE・EKS・AKSは制御プレーンの管理を委ねるための選択で、認証・認可の運用全体をクラウドに任せる選択ではありません。
+
+PostgreSQLを選ぶ理由は、既存の認証実験で使っており、認可・業務側も同じDB製品でバックアップや監視の知識を共通化できるためです。クラウドではHAや復元の運用をマネージドサービスへ寄せます。DB製品を揃えることと、DBインスタンスを共有することは別の判断です。
+
 三つの図は同じ読み方です。入口からKeycloakと業務APIに振り分け、業務APIだけが内部のOpenFGAへ問い合わせます。用途別DBはそれぞれ独立したHA構成です。ワーカー・秘密情報・監視は見通しを保つため図では省略し、後の表にまとめます。
 
 ### GCP：GKEとCloud SQLへ配置する
@@ -233,7 +316,7 @@ flowchart TB
             KC["Keycloak：複数Pod"]
             API["業務API：複数Pod"]
             FGA["OpenFGA：内部・複数Pod"]
-            API -->|"認可Check"| FGA
+            API -->|"HTTPS・JSONでCheck"| FGA
         end
         KC --- KDB[("Cloud SQL：認証DB・HA")]
         FGA --- FDB[("Cloud SQL：認可DB・HA")]
@@ -255,7 +338,7 @@ flowchart TB
             KC["Keycloak：複数Pod"]
             API["業務API：複数Pod"]
             FGA["OpenFGA：内部・複数Pod"]
-            API -->|"認可Check"| FGA
+            API -->|"HTTPS・JSONでCheck"| FGA
         end
         KC --- KDB[("RDS：認証DB・HA")]
         FGA --- FDB[("RDS：認可DB・HA")]
@@ -279,7 +362,7 @@ flowchart TB
             KC["Keycloak：複数Pod"]
             API["業務API：複数Pod"]
             FGA["OpenFGA：内部・複数Pod"]
-            API -->|"認可Check"| FGA
+            API -->|"HTTPS・JSONでCheck"| FGA
         end
         KC --- KDB[("PostgreSQL：認証DB・HA")]
         FGA --- FDB[("PostgreSQL：認可DB・HA")]
