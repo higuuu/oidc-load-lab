@@ -20,7 +20,7 @@ RESULT_FILES = [
     'results/public/run-set.json', 'results/public/comparison-summary.json',
     'results/public/condition-variability.svg', 'results/public/traffic-timeline.svg',
     'results/public/resource-timeline.svg',
-    'article/README.md', 'article/qiita.md', 'article/pr1-review.md',
+    'article/README.md', 'article/qiita.md', 'article/oidc-measurement.md', 'article/pr1-review.md',
     'article/generated-results.md', 'article/evidence-check.json', 'article/readability-review.md',
     'article/figures/reader-comparison.svg', 'article/figures/reader-discrepancy.svg',
     'article/figures/latency-and-cpu.svg', 'article/figures/exploration-discrepancy.svg',

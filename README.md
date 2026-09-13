@@ -87,7 +87,7 @@ python3 scripts/public_bundle.py --export
 
 ## 文書
 
-- [実測をもとにしたQiita記事原稿](article/qiita.md) / [PRレビューと検証範囲](article/pr1-review.md)
+- [OSS認証・認可アーキテクチャの記事原稿](article/qiita.md) / [認証実験の詳細](article/oidc-measurement.md) / [PRレビューと検証範囲](article/pr1-review.md)
 - [Mac mini側の担当者・エージェントへの実験指示書](docs/mac-mini-handoff.md)
 - [実験設計・非機能要件・土日の進め方](docs/experiment.md)
 - [構成図・認証シーケンス・概念ER図](docs/architecture.md)

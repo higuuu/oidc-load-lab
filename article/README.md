@@ -1,22 +1,29 @@
 # Qiita記事原稿
 
-- 本文: [qiita.md](qiita.md)
-- 公開JSONから再計算した全12試行の数値: [generated-results.md](generated-results.md)
-- 検査対象と入力ハッシュ: [evidence-check.json](evidence-check.json)
-- PRレビュー: [pr1-review.md](pr1-review.md)
-- 本文の10回通読と改稿記録: [readability-review.md](readability-review.md)
+- 主記事：[OSS認証・認可アーキテクチャ](qiita.md)
+- 実測の詳細：[認証負荷試験の方法・結果](oidc-measurement.md)
+- 公開JSONから再計算した全12試行：[generated-results.md](generated-results.md)
+- 入力ハッシュと検査結果：[evidence-check.json](evidence-check.json)
+- 結果PRのレビュー：[pr1-review.md](pr1-review.md)
+- 編集の履歴：[readability-review.md](readability-review.md)
 
-タイトル案は本文のものを第一候補とする。タグ案は `Keycloak`、`OpenIDConnect`、`OAuth`、`負荷試験`、`Docker`。狙いは消費者向けサービスのバックエンド/SRE/テックリードに、フロー別負荷の比較方法を持ち帰ってもらうこと。最大性能・独自発見・本番実績を示唆しない。
+## 読者と記事の位置づけ
 
-## 数値と図の再生成
+一般消費者向けサービスで、ログイン実装から認可・可用性・運用へ進もうとしているバックエンドエンジニアとテックリード向け。
 
-公開済みの集約値だけを読むため、Mac miniの生ログは不要。
+写真アルバムの共有を一貫した例に使い、Keycloak・OpenFGA・業務APIの責任分担、権限変更の整合性、ローカルとGCP/AWS/Azureへの配置、障害時の影響、試験の順序を説明する。既存の認証実験は、構成の一部を実際に測った例として活用する。
+
+「大規模認証の性能を証明した」「3クラウドで構築・検証した」とは書かない。認可モデル・クラウド配置は設計案で、実装やIaCは提供していない。読者が構成を選び、実装・試験の順序を決められることを記事の価値とする。
+
+タグ案：`Keycloak`、`OpenFGA`、`認証`、`認可`、`アーキテクチャ`。
+
+## 数値とグラフの再生成
 
 ```sh
 python3 scripts/build_article.py
 ```
 
-図の生成はmatplotlib 3.10.6を使用。依存関係を分離したPython環境で実行する。日本語フォントはHiragino Sans、Noto Sans CJK JP、IPAexGothicのいずれかが必要。
+公開集約値だけを読み、Mac miniの生ログは不要。日本語グラフはmatplotlib 3.10.6とHiragino Sans、Noto Sans CJK JP、IPAexGothicのいずれかを使う。
 
 ```sh
 python3 -m venv .venv-article
@@ -24,15 +31,16 @@ python3 -m venv .venv-article
 .venv-article/bin/python scripts/build_article.py --reader-figures
 ```
 
-`figures/reader-comparison.svg` と `figures/reader-discrepancy.svg`、Git対象外の `.preview/` に同名のPNGを生成する。本文はこの日本語の2図を使用する。旧版の詳細比較図は `--figures` で再生成できる。既存のtraffic/resource図はPRの提供物で、生ログなしに時系列を独立再計算したものではない。
+SVGは `figures/`、PNGはGit対象外の `.preview/` に生成する。主記事では比較図1枚、実測詳細では比較図と予備実験との差の2枚を使う。構成図7枚は本文内のMermaidが原本で、構成・通信・ER・ローカル・GCP・AWS・Azureを表す。
 
-## 投稿前の仕上げ
+## 投稿時の確認
 
-本文・表・図は作成済み。Qiitaにはまだ投稿していない。
+Qiitaには未投稿。
 
-1. Qiitaエディタへ本文を移し、画像2枚をアップロードして相対画像リンクを置換する。PNGは `.preview/` にある。記事や実行手順への相対リンクもGitHub上の該当ページへの絶対リンクに置換する。
-2. Mermaidの構成図・シーケンス・概念ER図と、表の描画をQiitaプレビューで確認する。
-3. コード例は結果PRの固定コミットを指定している。mainへのマージ状態にかかわらず測定対象を参照できる。リンクを変える場合も実験の来歴を残す。
-4. 探索での27ms/45.63%という差、時系列の粗さ、生データ非公開の限界は削らない。
+1. 主記事のグラフ1枚をアップロードし、画像リンクを置換する。
+2. 7枚のMermaidと表をQiitaプレビューで確認する。クラウド図は同じ順序・役割で描いている。
+3. 相対リンクをGitHubの各ページへの絶対リンクに置換する。実測詳細は補足資料としてリンクする。
+4. 冒頭の実装・未実装の区分、予備実験との差、監視収集エラー、測定範囲の制約を残す。
+5. クラウド案の実装時は採用リージョン・SKU・バージョン・ネットワーク設定を再確認する。公式資料の確認日は2026-09-13。
 
-記事はPR #1の集約結果をレビューした原稿。測定の追試やPRのマージ承認を行ったという意味ではない。
+10回の通読記録は以前の実験中心の記事に対するもの。主題変更後の改稿を、同じ版の10回レビューと扱わない。
